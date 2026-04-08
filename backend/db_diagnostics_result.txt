@@ -1,0 +1,9 @@
+Databases found: securevault, admin, local
+DB: securevault -> Collections: users, nominee_otps, assets, otps, nominees
+  [users] count: 2, sample _id: 69a6ec041514bd2cf0287f4b, _id type: ObjectId
+    sample email: shivrajambhore01@gmail.com
+  [nominee_otps] count: 0
+  [assets] count: 1, sample _id: 69a6ec751514bd2cf0287f4c, _id type: ObjectId
+  [otps] count: 0
+  [nominees] count: 1, sample _id: 69a6ec6c1cd9e2b475e657b8, _id type: ObjectId
+    sample email: shivrajambhore1111@gmail.com

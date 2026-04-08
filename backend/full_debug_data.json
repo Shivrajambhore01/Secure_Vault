@@ -1,0 +1,28 @@
+{
+  "user": {
+    "_id": "69a7e027d71f7658d320f12f",
+    "fullName": "santosh ambhoree ",
+    "email": "shivrajambhore01@gmail.com",
+    "phone": "+918380870615",
+    "dob": "2026-03-13",
+    "password": "$2b$12$/7nIX4qClI.zosjgwCO5lOvGPILaxFo9lgYBhvAy7ZuC8neS33tZe",
+    "pin": "$2b$12$ZlC7r5YqdTpNBQ64BRvrAejfW/8FMg1EGltw39.fXD9i0ffmwd7g.",
+    "role": "user",
+    "isTwoFactorEnabled": true,
+    "twoFactorSecret": "H5ZVOLDNO5NWI42IINKGSMRKN4VCYLCTMRQV4MZJJ42FMPZMHEQQ",
+    "isProfileComplete": true,
+    "inactivityPeriod": 12,
+    "plan": "pro",
+    "storageUsed": 5623742,
+    "storageLimit": 10737418240,
+    "isVerified": true,
+    "createdAt": "2026-03-04T07:32:55.134Z",
+    "lastActive": "2026-03-05T13:40:51.537Z",
+    "logoutTime": null,
+    "reEngagementCallSent": false,
+    "reEngagementMessagesSent": 0,
+    "reEngagementLastMessageAt": null,
+    "nomineesNotified": true
+  },
+  "otps": []
+}

@@ -1,0 +1,15 @@
+﻿[dotenv@17.3.1] injecting env (13) from .env -- tip: ÔÜÖ´©Å  enable debug logging with { debug: true }
+[dotenv@17.3.1] injecting env (1) from ..\.env.local -- tip: ­ƒøí´©Å auth for agents: https://vestauth.com
+Total users: 2
+User: shivrajambhore01@gmail.com
+  ID: 69a9c235df1983f63651ddfd
+  logoutTime: 2026-03-05T18:15:03.578Z
+  nomineesNotified: false
+  lastActive: 2026-03-05T17:53:14.535Z
+---
+User: ambhoresd@jdcoem.ac.in
+  ID: 69a9c307df1983f63651de00
+  logoutTime: 2026-03-05T18:15:03.578Z
+  nomineesNotified: false
+  lastActive: 2026-03-05T17:55:47.370Z
+---

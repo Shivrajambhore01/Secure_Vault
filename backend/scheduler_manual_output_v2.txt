@@ -1,0 +1,29 @@
+﻿[dotenv@17.3.1] injecting env (13) from .env -- tip: ÔÜÖ´©Å  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.3.1] injecting env (1) from ..\.env.local -- tip: ­ƒñû agentic secret storage: https://dotenvx.com/as2
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ÔÜÖ´©Å  override existing env vars with { override: true }
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ­ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+Starting manual scheduler run...
+Found 2 logged out users.
+
+Processing user: shivrajambhore01@gmail.com (69a7e027d71f7658d320f12f)
+[RE-ENGAGEMENT-V4] Re-engagement cycle COMPLETED for shivrajambhore01@gmail.com
+[NOMINEE-NOTIFICATION] Starting notification process for userId: 69a7e027d71f7658d320f12f
+[NOMINEE-NOTIFICATION] User: shivrajambhore01@gmail.com
+[NOMINEE-NOTIFICATION] Found 2 nominee(s) for user shivrajambhore01@gmail.com
+[NOMINEE-NOTIFICATION] Processing nominee: Shivraj Ambhore <shivrajambhore1111@gmail.com>
+[NOMINEE-NOTIFICATION] Access token saved for nominee: shivrajambhore1111@gmail.com
+[NOMINEE-NOTIFICATION] Ô£à Email sent to: shivrajambhore1111@gmail.com
+[NOMINEE-NOTIFICATION] Processing nominee: santosh ambhoree  <shivrajgdgjdcoem@gmail.com>
+[NOMINEE-NOTIFICATION] Access token saved for nominee: shivrajgdgjdcoem@gmail.com
+[NOMINEE-NOTIFICATION] Ô£à Email sent to: shivrajgdgjdcoem@gmail.com
+[NOMINEE-NOTIFICATION] Done. 2/2 nominees notified for user shivrajambhore01@gmail.com
+
+Processing user: ambhoresd@jdcoem.ac.in (69a97d59b7321f395a651385)
+[RE-ENGAGEMENT-V4] Re-engagement cycle COMPLETED for ambhoresd@jdcoem.ac.in
+[NOMINEE-NOTIFICATION] Starting notification process for userId: 69a97d59b7321f395a651385
+[NOMINEE-NOTIFICATION] User: ambhoresd@jdcoem.ac.in
+[NOMINEE-NOTIFICATION] Found 1 nominee(s) for user ambhoresd@jdcoem.ac.in
+[NOMINEE-NOTIFICATION] Processing nominee: Shivraj Ambhore <shivrajambhore1111@gmail.com>
+[NOMINEE-NOTIFICATION] Access token saved for nominee: shivrajambhore1111@gmail.com
+[NOMINEE-NOTIFICATION] Ô£à Email sent to: shivrajambhore1111@gmail.com
+[NOMINEE-NOTIFICATION] Done. 1/1 nominees notified for user ambhoresd@jdcoem.ac.in
