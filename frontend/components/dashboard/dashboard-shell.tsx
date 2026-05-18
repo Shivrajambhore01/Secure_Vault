@@ -33,7 +33,6 @@ import {
 import { toast } from "sonner"
 import { getUser, isLoggedIn, setLoggedIn } from "@/lib/store"
 import { secureFetch } from "@/lib/api"
-import { WalletConnect } from "@/components/auth/wallet-connect"
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -173,9 +172,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2">
-              <WalletConnect />
-            </div>
 
             <Button
               variant="ghost"

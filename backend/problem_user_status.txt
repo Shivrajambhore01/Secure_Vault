@@ -1,9 +1,0 @@
-﻿[dotenv@17.3.1] injecting env (13) from .env -- tip: ­ƒøá´©Å  run anywhere with `dotenvx run -- yourcommand`
-[dotenv@17.3.1] injecting env (1) from ..\.env.local -- tip: ­ƒøí´©Å auth for agents: https://vestauth.com
-User: ambhoresd@jdcoem.ac.in
-  logoutTime: 2026-03-05T17:33:54.016Z
-  nomineesNotified: true
-  reEngagementCallSent: true
-  reEngagementMessagesSent: 2
-  Nominees found: 1
-    - Shivraj Ambhore <shivrajambhore1111@gmail.com> (accessToken: YES)

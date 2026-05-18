@@ -674,11 +674,10 @@ export default function SettingsPage() {
           <div>
             <h3 className="font-semibold text-foreground">Security Overview</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your vault is protected with AES-256 encryption, blockchain verification,
-              and smart contract automation. All actions are logged immutably on-chain.
+              Your vault is protected with AES-256 encryption and automated inheritance logic.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {["AES-256", "JWT Auth", "Blockchain", "Smart Contracts"].map((tag) => (
+              {["AES-256", "JWT Auth", "Secure Storage"].map((tag) => (
                 <span
                   key={tag}
                   className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"

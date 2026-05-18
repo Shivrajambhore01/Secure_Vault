@@ -10,7 +10,6 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
-import { updateActivityOnChain } from "../lib/blockchain";
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -723,10 +722,6 @@ router.post("/heartbeat", authenticateJWT, async (req: Request, res: Response) =
                 }
             }
         );
-        // Blockchain activity update
-        if (user && user.walletAddress) {
-            updateActivityOnChain(user.walletAddress).catch(err => console.error("BC Heartbeat Error:", err));
-        }
 
         console.log(`[Heartbeat] User ${userId} is active.`);
         res.status(200).json({ status: "active", isOnline: true });

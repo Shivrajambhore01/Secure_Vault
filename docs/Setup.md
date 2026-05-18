@@ -16,11 +16,12 @@ git clone <repository-url>
 cd SecureVault
 
 # Install frontend dependencies
-npm install
+cd frontend
+pnpm install
 
 # Install backend dependencies
-cd backend
-npm install
+cd ../backend
+pnpm install
 ```
 
 ## 🔐 Step 2: Configure Environment Variables
@@ -30,65 +31,58 @@ You need to create/update two `.env` files.
 ### Backend (`backend/.env`)
 Create a file at `backend/.env` with the following:
 ```env
-MONGODB_URI="your_mongodb_connection_string"
-ENCRYPTION_KEY="a_32_character_hex_key"
-PORT=5000
-JWT_SECRET="your_random_jwt_secret"
+MONGODB_URI="your_mongodb_connection_string" # Atlas or local MongoDB URL
+ENCRYPTION_KEY="a_32_character_hex_key"       # Must be exactly 32 hex chars
+PORT=5000                                     # Backend port
+JWT_SECRET="your_random_jwt_secret"           # Secure string for signing tokens
 
-# Email Configuration (for OTPs and Notifications)
-EMAIL_USER="your_email@gmail.com"
-EMAIL_PASS="your_app_password"
+# Email Configuration (for OTPs)
+EMAIL_USER="your_email@gmail.com"             # SMTP sender email
+EMAIL_PASS="your_app_password"               # App-specific password (not login pass)
 
 # Google OAuth
-GOOGLE_CLIENT_ID="your_google_client_id"
-GOOGLE_CLIENT_SECRET="your_google_client_secret"
+GOOGLE_CLIENT_ID="your_google_id"             # From Google Cloud Console
+GOOGLE_CLIENT_SECRET="your_google_secret"     
 
-# Twilio (Optional, for SMS notifications)
-TWILIO_ACCOUNT_SID="your_sid"
-TWILIO_AUTH_TOKEN="your_token"
-TWILIO_PHONE_NUMBER="your_twilio_number"
-
-# Blockchain Configuration (Polygon Amoy Testnet)
-POLYGON_AMOY_RPC_URL="https://rpc-amoy.polygon.technology"
-PRIVATE_KEY="your_server_wallet_private_key"
-CONTRACT_ADDRESS="deployed_contract_address"
 ```
 
-### Frontend (`.env.local`)
-Create a file at the root `.env.local`:
+### Frontend (`frontend/.env.local`)
+Create a file at `frontend/.env.local`:
 ```env
-NEXT_PUBLIC_GOOGLE_CLIENT_ID="your_google_client_id"
-# Backend API URL (default: http://localhost:5000)
+NEXT_PUBLIC_GOOGLE_CLIENT_ID="your_google_id"
 NEXT_PUBLIC_API_URL="http://localhost:5000"
 ```
 
 ## 🚀 Step 3: Run the Application
 
-You need to start both the frontend and the backend.
-
 ### Start Backend
 ```bash
 cd backend
-npm run dev # or: ts-node server.ts
+pnpm run dev
 ```
 
 ### Start Frontend
 ```bash
-# In the root directory
-npm run dev
+cd frontend
+pnpm run dev
 ```
 
 The application should now be accessible at `http://localhost:3000`.
 
-## 🧪 Step 4: Testing
+## 🧪 Step 4: Testing & Troubleshooting
 
-The backend includes several utility scripts for testing flows:
-- `backend/test_flow.js`: Tests the end-to-end user flow.
-- `backend/check_db.js`: Verifies database connection and data.
-- `backend/full_test_pin.js`: Tests the secondary PIN authentication.
+### **Common Issues**
+1. **MongoDB Connection Failed**: 
+   - Ensure your IP address is whitelisted in MongoDB Atlas.
+   - Check if `MONGODB_URI` is correctly formatted.
+2. **Encryption Key Error**: 
+   - Ensure `ENCRYPTION_KEY` is a valid 32-character hexadecimal string.
+3. **Google Login Fails**:
+   - Verify that your Authorized Redirect URIs in Google Console include `http://localhost:3000`.
 
-To run a test script:
-```bash
-cd backend
-node test_flow.js
-```
+### **Test Scripts**
+The backend includes several utility scripts:
+- `backend/check_db.js`: Verifies database connection.
+- `backend/full_test_pin.js`: Tests the secondary PIN logic.
+
+Run with: `node backend/check_db.js`

@@ -9,7 +9,6 @@ SecureVault is built with a modern, decoupled architecture featuring a Next.js f
 - **State Management**: React Hooks and Context API for global state.
 - **UI Architecture**: Component-based design using Shadcn/Radix UI for accessible and consistent UI.
 - **Authentication**: Client-side handling of JWT and integration with Google OAuth.
-- **Web3 Integration**: MetaMask connectivity for decentralized ownership verification.
 
 ### 2. Backend (Node.js/Express)
 - **API Engine**: Express.js handling RESTful API requests.
@@ -23,26 +22,40 @@ SecureVault is built with a modern, decoupled architecture featuring a Next.js f
 
 ## 🛡️ Security Model
 
-### 1. Data Encryption
-Sensitive data is NEVER stored in plain text.
-- **Algorithm**: `AES-256-CBC`.
-- **Key Management**: Uses a 32-character hexadecimal key stored in environment variables.
-- **Implementation**: Every encrypted string is prefixed with its Initialization Vector (IV) for maximum security (`iv:encryptedData`).
-- **Tamper-Proofing**: A SHA-256 hash of each encrypted asset is stored on the Polygon blockchain to prevent unauthorized modifications.
+### 1. Data Encryption Flow
+SecureVault follows a "Zero-Trust" principle for sensitive data.
+- **Algorithm**: `AES-256-CBC` (Advanced Encryption Standard).
+- **Process**:
+    1. **Encryption**: When a user saves an asset (e.g., a password), the backend generates a random 16-byte Initialization Vector (IV). The data is encrypted using the shared `ENCRYPTION_KEY` and the IV.
+    2. **Storage**: The IV and the encrypted ciphertext are combined (`iv:ciphertext`) and stored in MongoDB.
+    3. **Decryption**: Upon an authorized request, the backend splits the string, extracts the IV, and decrypts the ciphertext using the key.
+- **Key Management**: The `ENCRYPTION_KEY` is a 32-character hex string stored securely in environment variables.
 
-### 2. Authentication Flow
-SecureVault implements a dual-layer authentication strategy:
-- **Layer 1**: Primary account access via email/password or Google OAuth.
-- **Layer 2 (Optional)**: Secondary PIN verification for accessing highly sensitive assets.
-- **Session Management**: Secure, HTTP-only cookies store JWT tokens to prevent XSS attacks.
 
-### 3. Inactivity Monitoring & Legacy System
-A unique feature of SecureVault is its "Dead Man's Switch" mechanism:
-- **Scheduler**: A background task (Node-Cron or custom setInterval) monitors `last_activity` timestamps for users.
-- **Triggers**: If a user is inactive for a user-defined threshold, the system triggers the legacy transfer process.
-- **Execution**: Nominees are notified and granted access to the specific assets assigned to them.
+### 3. Authentication & Authorization
+- **JWT**: Secure authentication via JSON Web Tokens stored in HTTP-only, secure cookies.
+- **RBAC**: Role-Based Access Control (Admin vs. User).
+- **2FA/PIN**: Critical operations (like viewing top-secret assets) require a secondary 6-digit PIN.
 
-## 🔄 Data Integrity & Flow
+## 🔄 The Legacy System (Dead Man's Switch)
+
+The core innovation of SecureVault is its automated inheritance mechanism.
+
+### 1. Activity Monitoring
+A background scheduler (Node-Cron) runs at regular intervals:
+- It checks the `lastActive` timestamp for each user.
+- If `now - lastActive > userThreshold`, the user is flagged as "Inactive".
+
+### 2. Inheritance Trigger
+Once inactive, the system:
+1. Verifies user inactivity threshold.
+2. Generates a secure `nomineeAccessToken` for designated nominees.
+3. Notifies nominees via Email/SMS.
+
+### 3. Asset Access
+Nominees can log in using their special token and OTP to view only the assets specifically designated for them by the original owner.
+
+## 🔄 System Data Flow
 
 ```mermaid
 graph TD
@@ -52,10 +65,12 @@ graph TD
     D -->|Valid| E[Service Logic]
     E -->|Encrypt/Decrypt| F[Encryption Lib]
     E -->|Read/Write| G[(MongoDB)]
-    E -->|Register/Verify| J[Polygon Chain]
     H[Scheduler] -->|Check Activity| G
     H -->|Trigger Legacy| I[Nominee Access]
 ```
 
 ## 📂 File Storage
-Assets that include file uploads are stored in the `backend/uploads/` directory. Metadata about these files (name, size, type) is stored in the database, while the files themselves are referenced by their unique disk paths.
+Assets including file uploads are stored in `backend/uploads/`.
+- Files are renamed using unique timestamps to prevent collisions.
+- Only the file path and metadata (original name, mimetype) are stored in MongoDB.
+- Access to these files is protected by the same JWT middleware as the API.
