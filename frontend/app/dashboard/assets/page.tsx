@@ -249,12 +249,6 @@ export default function AssetsPage() {
                     <span className="inline-flex items-center rounded-lg bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-white/10">
                       {typeLabels[asset.type]}
                     </span>
-                    {asset.blockchain?.verified && (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/80 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-emerald-400/20 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                        <ShieldCheck className="h-3 w-3" />
-                        Verified
-                      </span>
-                    )}
                   </div>
 
                   {/* Quick Action Overlay */}
@@ -451,19 +445,6 @@ export default function AssetsPage() {
                       <span className="text-muted-foreground flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Beneficiary</span>
                       <span className="font-medium">{nominees.find(n => n.id === viewAsset.nomineeId)?.name || "Not set"}</span>
                     </div>
-                    {viewAsset.blockchain?.txHash && (
-                      <div className="flex justify-between border-b border-border/50 pb-2">
-                        <span className="text-muted-foreground flex items-center gap-2"><LinkIcon className="h-3.5 w-3.5" /> Blockchain</span>
-                        <a 
-                          href={`https://amoy.polygonscan.com/tx/${viewAsset.blockchain.txHash}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline flex items-center gap-1"
-                        >
-                          View on Explorer <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
                   </div>
                 </div>
 

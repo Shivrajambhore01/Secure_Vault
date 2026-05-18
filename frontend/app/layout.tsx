@@ -12,7 +12,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'SecureVault - Digital Asset Inheritance Platform',
-  description: 'Securely store and transfer your digital assets to trusted nominees. Blockchain-powered security with automated inheritance.',
+  description: 'Securely store and transfer your digital assets to trusted nominees. AES-256-powered security with automated inheritance.',
   generator: 'v0.app',
   icons: {
     icon: [

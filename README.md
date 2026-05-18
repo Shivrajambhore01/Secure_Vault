@@ -1,55 +1,59 @@
-# SecureVault
+# 🛡️ SecureVault
 
-SecureVault is a comprehensive web application designed for secure digital asset storage and legacy planning. It allows users to safely store sensitive information, documents, and assets, with a robust "Nominee" system to ensure that your digital legacy is passed on to your loved ones in case of prolonged inactivity.
+SecureVault is a premium, enterprise-grade digital inheritance and secure asset storage platform. It combines robust AES-256 encryption with a secure nominee system to ensure your digital legacy is protected, verified, and seamlessly transferred to your loved ones through an automated "Dead Man's Switch" mechanism.
 
-## 🚀 Key Features
+## ✨ Core Features
 
-- **Secure Storage**: Store and encrypt sensitive data using AES-256-CBC encryption.
-- **Blockchain Verification**: Assets are verified on the Polygon network using SHA-256 metadata hashes.
-- **Automated Inheritance**: Decentralized inheritance logic via the `SecureVaultInheritance` smart contract.
-- **Nominee System**: Appoint nominees who will receive access to specific assets if you are inactive for a predefined period.
-- **Inactivity Monitoring**: A background scheduler monitors user activity and triggers the legacy transfer process if necessary.
-- **Multi-Factor Authentication**: Support for PIN-based secondary authentication and Google OAuth.
-- **Unified Dashboard**: Manage all your assets, nominees, and security settings from a sleek, modern interface.
+### 🔐 Multi-Layered Security
+- **AES-256-CBC Encryption**: Your sensitive data (passwords, documents, notes) is encrypted on the server before being stored in the database. Only you (and eventually your nominees) can decrypt it.
+- **Secondary PIN Protection**: An extra layer of security for the most sensitive assets, requiring a separate 6-digit PIN.
+- **Google OAuth 2.0 Integration**: Secure login using your Google account.
+- **JWT-Based Sessions**: Secure session management using HTTP-only cookies.
 
-## 🛠️ Tech Stack
 
-### Frontend
-- **Framework**: [Next.js](https://nextjs.org/) (App Router)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Components**: [Radix UI](https://www.radix-ui.com/) & [Shadcn UI](https://ui.shadcn.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
+### 📜 Automated Inheritance (The Nominee System)
+- **Nominee Appointment**: Designate trusted individuals (nominees) for specific assets.
+- **Inactivity Monitoring**: The system tracks your "last active" timestamp. If you are inactive beyond your chosen threshold (e.g., 3 months), the legacy process begins.
+- **Transparent Transfer**: Nominees are notified and granted access through a secure, OTP-verified portal.
 
-### Backend
-- **Server**: [Node.js](https://nodejs.org/) with [Express](https://expressjs.com/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Database**: [MongoDB Atlas](https://www.mongodb.com/atlas)
-- **Authentication**: JWT & Google OAuth 2.0
-- **Encryption**: Node.js `crypto` module (AES-256-CBC)
+## 🚀 Quick Start
 
-## 📁 Project Structure
+### 1. Prerequisites
+- [Node.js](https://nodejs.org/) (v18+)
+- [MongoDB Atlas](https://www.mongodb.com/atlas) account
 
-```text
-SecureVault/
-├── app/                # Next.js App Router (Frontend Pages)
-├── backend/            # Express Server (API & Logic)
-│   ├── routes/         # API Endpoints (Auth, Assets, Nominees)
-│   ├── lib/            # Utilities (Encryption, DB, Scheduler)
-│   └── uploads/        # Local storage for asset files
-├── components/         # Reusable UI Components
-├── hooks/              # Custom React Hooks
-├── lib/                # Shared utilities & configurations
-└── public/             # Static assets
+### 2. Installation
+```bash
+# Install dependencies
+cd frontend && pnpm install
+cd ../backend && pnpm install
 ```
 
-## 📖 Documentation
+### 3. Environment Setup
+Fill in the `.env` files in the root and `backend/` directories. Refer to the [Setup Guide](docs/Setup.md) for details.
 
-For more detailed information, please refer to the following guides in the `docs/` directory:
+### 4. Running Locally
+```bash
+# Terminal 1: Frontend
+cd frontend && npm run dev
 
-- [**Architecture Overview**](docs/Architecture.md): Deep dive into the system design and security model.
-- [**API Reference**](docs/API.md): Detailed documentation of all backend API endpoints.
-- [**Setup Guide**](docs/Setup.md): Instructions for local development and deployment.
+# Terminal 2: Backend
+cd backend && npm run dev
+```
+
+## 📂 Project Structure
+
+- **`frontend/`**: Next.js App Router project containing all UI components, pages, and client-side logic.
+- **`backend/`**: Express server handling the API, encryption, and the inactivity scheduler.
+- **`docs/`**: Comprehensive project documentation.
+
+## 📖 Detailed Guides
+
+- 🏗️ [**Architecture Overview**](docs/Architecture.md): Deep dive into system design and the security model.
+- 🔌 [**API Reference**](docs/API.md): Documentation of all backend endpoints.
+- 🛠️ [**Setup & Installation**](docs/Setup.md): Instructions for local development.
+- 🚀 [**Deployment Guide**](docs/Deployment.md): Steps to take SecureVault to production.
 
 ## ⚖️ License
 
-This project is private and intended for personal use or internal evaluation.
+This project is intended for private use and evaluation. All rights reserved.

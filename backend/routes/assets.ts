@@ -5,7 +5,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { authenticateJWT } from "./auth";
-import { generateAssetHash, registerAssetOnChain } from "../lib/blockchain";
 
 const router = express.Router();
 
@@ -96,35 +95,6 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
             assetData.content = content; // In a real app, encrypt this!
         }
 
-        // --- BLOCKCHAIN INTEGRATION ---
-        try {
-            const assetContent = file ? fs.readFileSync(file.path) : (content || "");
-            const assetHash = generateAssetHash(assetContent);
-            
-            // Get nominee wallet address (need to fetch nominee from DB)
-            const nominee = await db.collection("nominees").findOne({ id: nomineeId });
-            
-            if (nominee && nominee.walletAddress) {
-                console.log(`[Blockchain] Registering asset on chain...`);
-                const blockchainData = await registerAssetOnChain(
-                    assetHash, 
-                    nominee.walletAddress, 
-                    user.inactivityPeriod || 7
-                );
-                
-                assetData.blockchain = {
-                    assetHash: assetHash,
-                    txHash: blockchainData.txHash,
-                    assetId: blockchainData.assetId,
-                    verified: true,
-                    timestamp: new Date().toISOString()
-                };
-            }
-        } catch (bcError) {
-            console.error("[Blockchain] Registration failed:", bcError);
-            assetData.blockchain = { verified: false, error: "Chain sync failed" };
-        }
-        // ------------------------------
 
         if (id) {
             // Update existing

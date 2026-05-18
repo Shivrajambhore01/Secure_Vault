@@ -8,19 +8,24 @@ This document provides a reference for the SecureVault backend API endpoints. Al
 |----------|--------|-------------|---------------|
 | `/signup` | POST | Register a new user | No |
 | `/login` | POST | Login with email/password | No |
-| `/google-auth` | POST | Login or signup with Google OAuth | No |
-| `/2fa/setup` | POST | Generate 2FA secret and QR code | Yes (JWT) |
-| `/2fa/verify` | POST | Verify and enable 2FA | Yes (JWT) |
-| `/2fa/login-verify` | POST | Verify 2FA token during login | No |
-| `/send-otp` | POST | Send an OTP to the user's email | No |
-| `/verify-otp` | POST | Verify an OTP | No |
-| `/verify-pin` | POST | Verify the user's secondary PIN | No |
-| `/update-pin` | POST | Update the user's secondary PIN | Yes (JWT) |
-| `/me/:userId` | GET | Fetch the current user's profile | Yes (JWT) |
-| `/update-profile`| POST | Update user profile information | Yes (JWT) |
-| `/update-password`| POST | Update user password | Yes (JWT) |
-| `/update-plan` | POST | Upgrade user storage plan | Yes (JWT) |
-| `/heartbeat` | POST | Update user's `lastActive` timestamp | Yes (JWT) |
+| `/me/:userId` | GET | Fetch user profile | Yes (JWT) |
+| `/heartbeat` | POST | Update `lastActive` timestamp | Yes (JWT) |
+
+### **POST `/api/auth/login` Example:**
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword123"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "message": "Login successful",
+  "user": { "id": "user123", "name": "John Doe", "email": "user@example.com" }
+}
+```
 
 ## 📦 Asset Management (`/api/assets`)
 
@@ -30,11 +35,24 @@ All asset routes require JWT authentication.
 |----------|--------|-------------|
 | `/:userId` | GET | Fetch all assets belonging to a user |
 | `/` | POST | Create or update an asset (supports file upload) |
-| `/:userId/:id` | DELETE | Delete an asset and free up storage |
+| `/:userId/:id` | DELETE | Delete an asset |
 
-**POST `/api/assets` Details:**
+### **POST `/api/assets` Details:**
 - Uses `multipart/form-data`.
-- Fields: `id` (optional), `userId`, `name`, `type`, `description`, `nomineeId`, `content`, `file`.
+- Fields: `userId`, `name`, `type` (Note, Password, File), `description`, `content` (encrypted), `file` (optional).
+
+**Response (201 Created):**
+```json
+{
+  "message": "Asset created successfully",
+  "asset": {
+    "id": "asset789",
+    "name": "My Bitcoin Seed",
+    "type": "Password",
+    "onChainHash": "0xabc123..."
+  }
+}
+```
 
 ## 👥 Nominee System (`/api/nominees`)
 
@@ -42,11 +60,22 @@ All asset routes require JWT authentication.
 |----------|--------|-------------|---------------|
 | `/:userId` | GET | Fetch all nominees for a user | Yes (JWT) |
 | `/` | POST | Create or update a nominee | Yes (JWT) |
-| `/:userId/:id` | DELETE | Delete a nominee | Yes (JWT) |
 | `/verify/:token` | GET | Verify a nominee access token | No |
-| `/send-otp` | POST | Send OTP to a nominee's email | No |
-| `/verify-otp` | POST | Verify nominee OTP and get session | No |
-| `/assets/:sessionToken` | GET | Fetch assets assigned to a nominee | No |
+| `/assets/:sessionToken` | GET | Fetch assets for a nominee | No |
+
+### **GET `/api/nominees/assets/:token` Example:**
+**Response (200 OK):**
+```json
+{
+  "assets": [
+    {
+      "name": "Emergency Contact Info",
+      "content": "iv:encrypted_data...",
+      "isDecrypted": false
+    }
+  ]
+}
+```
 
 ## 🛠️ Global Middlewares
 
