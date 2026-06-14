@@ -3,7 +3,7 @@ import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
 import { InactivityTracker } from '@/components/auth/inactivity-tracker'
-import { SessionTimeoutTracker } from '@/components/auth/session-timeout-tracker'
+// import { SessionTimeoutTracker } from '@/components/auth/session-timeout-tracker' // DISABLED: Session timeout removed
 import { GoogleAuthProvider } from '@/components/providers/google-auth-provider'
 import './globals.css'
 
@@ -49,7 +49,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <GoogleAuthProvider>
           {children}
-          <SessionTimeoutTracker />
+          {/* <SessionTimeoutTracker /> */}
           <InactivityTracker />
           <Toaster richColors position="top-right" />
           <Analytics />

@@ -22,7 +22,7 @@ export default function NomineeVerifyPage() {
     useEffect(() => {
         const fetchNominee = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/nominees/verify/${token}`)
+                const response = await fetch(`http://localhost:8000/api/nominees/verify/${token}`)
                 const data = await response.json()
                 if (response.ok) {
                     setNominee(data)
@@ -43,7 +43,7 @@ export default function NomineeVerifyPage() {
         if (!nominee) return
         setVerifying(true)
         try {
-            const response = await fetch("http://localhost:5000/api/nominees/send-otp", {
+            const response = await fetch("http://localhost:8000/api/nominees/send-otp", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, email: nominee.email })
@@ -68,7 +68,7 @@ export default function NomineeVerifyPage() {
 
         setVerifying(true)
         try {
-            const response = await fetch("http://localhost:5000/api/nominees/verify-otp", {
+            const response = await fetch("http://localhost:8000/api/nominees/verify-otp", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token, email: nominee.email, otp })

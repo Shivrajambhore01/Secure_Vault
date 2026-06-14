@@ -23,7 +23,7 @@ function VerifyContent() {
 
         const verifyEmail = async () => {
             try {
-                const response = await fetch(`http://localhost:5000/api/auth/verify-email?token=${token}`)
+                const response = await fetch(`http://localhost:8000/api/auth/verify-email?token=${token}`)
                 const data = await response.json()
 
                 if (response.ok) {

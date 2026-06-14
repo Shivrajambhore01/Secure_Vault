@@ -164,7 +164,7 @@ export default function AddAssetPage() {
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.withCredentials = true // Send HttpOnly cookies
-        xhr.open("POST", "http://localhost:5000/api/assets", true)
+        xhr.open("POST", "http://localhost:8000/api/assets", true)
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {

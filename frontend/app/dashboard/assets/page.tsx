@@ -140,7 +140,7 @@ export default function AssetsPage() {
     setShowPassword(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const getAssetUrl = (path: string) => `http://localhost:5000${path}`
+  const getAssetUrl = (path: string) => `http://localhost:8000${path}`
 
   // PIN Modal
   if (!pinVerified) {

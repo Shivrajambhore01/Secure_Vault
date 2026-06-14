@@ -73,7 +73,7 @@ export default function NomineeVaultPage() {
             }
 
             try {
-                const response = await fetch(`http://localhost:5000/api/nominees/assets/${sessionToken}`)
+                const response = await fetch(`http://localhost:8000/api/nominees/assets/${sessionToken}`)
                 const data = await response.json()
 
                 if (response.ok) {
@@ -99,7 +99,7 @@ export default function NomineeVaultPage() {
         return matchesSearch && matchesType
     })
 
-    const getAssetUrl = (path: string) => `http://localhost:5000${path}`
+    const getAssetUrl = (path: string) => `http://localhost:8000${path}`
     const togglePassword = (id: string) => setShowPassword(prev => ({ ...prev, [id]: !prev[id] }))
 
     if (loading) {
