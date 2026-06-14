@@ -98,6 +98,7 @@ def _reset_reengagement_fields() -> dict:
         "reEngagementCallSent": False,
         "reEngagementMessagesSent": 0,
         "reEngagementLastMessageAt": None,
+        "nomineesNotified": False,
     }
 
 
@@ -917,6 +918,7 @@ async def logout(response: Response, current_user: dict = Depends(get_current_us
                     "reEngagementCallSent": False,
                     "reEngagementMessagesSent": 0,
                     "reEngagementLastMessageAt": None,
+                    "nomineesNotified": False,
                 }
             },
         )
