@@ -261,7 +261,6 @@ export default function LoginPage() {
               onError={() => toast.error("Google login failed")}
               theme="outline"
               size="large"
-              width="100%"
               text="continue_with"
               shape="rectangular"
             />

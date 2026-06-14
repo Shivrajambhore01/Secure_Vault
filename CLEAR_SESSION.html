@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear SecureVault Session</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0d1520;
+            color: #fff;
+        }
+        .container {
+            background: #1a2332;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 10px 10px 0;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .success {
+            background: #10b981;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        .info {
+            background: #1e3a5f;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .code {
+            background: #0a0e1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 SecureVault Session Cleaner</h1>
+        
+        <div class="info">
+            <strong>Use this page to fix login issues caused by old sessions</strong>
+            <p>This will clear all cookies and localStorage related to SecureVault.</p>
+        </div>
+
+        <button onclick="clearEverything()">Clear All Sessions</button>
+        <button onclick="clearCookies()">Clear Cookies Only</button>
+        <button onclick="clearLocalStorage()">Clear LocalStorage Only</button>
+        
+        <div id="success" class="success">
+            ✅ Successfully cleared! You can now try logging in again.
+            <br><br>
+            <a href="http://localhost:3000/login" style="color: white;">Go to Login Page →</a>
+        </div>
+
+        <h3>Current Session Info</h3>
+        <div class="code" id="sessionInfo">Loading...</div>
+
+        <h3>Manual Clear (Copy & Paste in Console)</h3>
+        <div class="code">
+document.cookie.split(";").forEach(c => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;domain=localhost");
+});
+localStorage.clear();
+location.reload();
+        </div>
+    </div>
+
+    <script>
+        function displaySessionInfo() {
+            const cookies = document.cookie || 'None';
+            const localStorageKeys = Object.keys(localStorage).filter(k => k.startsWith('sv_'));
+            
+            let info = '<strong>Cookies:</strong><br>';
+            if (cookies === 'None') {
+                info += 'No cookies found<br>';
+            } else {
+                info += cookies.split(';').map(c => '  ' + c.trim()).join('<br>') + '<br>';
+            }
+            
+            info += '<br><strong>LocalStorage (SecureVault keys):</strong><br>';
+            if (localStorageKeys.length === 0) {
+                info += 'No SecureVault data found<br>';
+            } else {
+                info += localStorageKeys.map(k => `  ${k}: ${localStorage.getItem(k)?.substring(0, 50)}...`).join('<br>');
+            }
+            
+            document.getElementById('sessionInfo').innerHTML = info;
+        }
+
+        function clearCookies() {
+            // Clear all cookies for localhost
+            document.cookie.split(";").forEach(function(c) {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/;domain=localhost");
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            showSuccess();
+            setTimeout(displaySessionInfo, 100);
+        }
+
+        function clearLocalStorage() {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('sv_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            showSuccess();
+            setTimeout(displaySessionInfo, 100);
+        }
+
+        function clearEverything() {
+            clearCookies();
+            clearLocalStorage();
+            
+            showSuccess();
+            setTimeout(displaySessionInfo, 100);
+        }
+
+        function showSuccess() {
+            document.getElementById('success').style.display = 'block';
+        }
+
+        // Display on load
+        displaySessionInfo();
+    </script>
+</body>
+</html>

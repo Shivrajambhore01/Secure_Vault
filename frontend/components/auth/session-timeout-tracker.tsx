@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { isLoggedIn, setLoggedIn, setCurrentUserId, saveUser, getUser } from "@/lib/store"
 import { secureFetch } from "@/lib/api"
 
-const SESSION_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+const SESSION_TIMEOUT_MS = 60 * 60 * 1000 // 60 minutes (1 hour)
 
 export function SessionTimeoutTracker() {
     const router = useRouter()
