@@ -127,10 +127,11 @@ async def nominee_send_otp(data: NomineeSendOTPRequest):
     </div>
     """
 
+    print(f"[NOMINEE-OTP] Generated OTP for {data.email}: {otp}")
     try:
         await _send_email(data.email, "SecureVault Nominee Verification Code", html)
-    except Exception:
-        print(f"[DEV MODE] Nominee OTP for {data.email}: {otp}")
+    except Exception as e:
+        print(f"[NOMINEE-OTP] Email failed: {e}")
 
     return {"message": "OTP sent successfully"}
 

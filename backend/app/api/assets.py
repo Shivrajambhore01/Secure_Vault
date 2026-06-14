@@ -8,7 +8,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from bson.binary import Binary
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Response
 from typing import Optional
 
 from app.core.database import db
@@ -60,8 +61,13 @@ async def save_asset(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    asset_id = id
+    if not asset_id:
+        import random, string
+        asset_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:]
+
     new_file_size = 0
-    saved_filename = None
+    file_content = None
 
     if file and file.filename:
         # Read file content
@@ -82,15 +88,6 @@ async def save_asset(
         if new_file_size > file_size_limit:
             raise HTTPException(status_code=403, detail=f"File size exceeds limits for {plan} plan.")
 
-        # Save file
-        unique_suffix = f"{int(time.time() * 1000)}-{math.floor(1e9 * (time.time() % 1))}"
-        ext = Path(file.filename).suffix
-        saved_filename = f"{unique_suffix}{ext}"
-        file_path = UPLOAD_DIR / saved_filename
-
-        with open(file_path, "wb") as f:
-            f.write(file_content)
-
     # Build asset data
     asset_data = {
         "name": name,
@@ -100,11 +97,12 @@ async def save_asset(
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
-    if file and saved_filename:
+    if file and file_content:
         asset_data["fileName"] = file.filename
-        asset_data["filePaths"] = f"/uploads/{saved_filename}"
+        asset_data["filePaths"] = f"/api/assets/file/{asset_id}"
         asset_data["fileSize"] = new_file_size
         asset_data["mimeType"] = file.content_type
+        asset_data["fileData"] = Binary(file_content)
 
     if content:
         asset_data["content"] = content
@@ -118,10 +116,8 @@ async def save_asset(
         )
     else:
         # Create new
-        import random, string
-        new_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:]
         await assets_col.insert_one({
-            "id": new_id,
+            "id": asset_id,
             "userId": userId,
             **asset_data,
             "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -152,3 +148,28 @@ async def delete_asset(user_id: str, asset_id: str, current_user: dict = Depends
 
     await assets_col.delete_one({"id": asset_id, "userId": user_id})
     return {"message": "Asset deleted successfully"}
+
+
+# ------------------------------------------------------------------
+# GET asset file content from MongoDB (public/accessible by nominee/owner)
+# ------------------------------------------------------------------
+@router.get("/file/{asset_id}")
+async def get_asset_file(asset_id: str):
+    asset = await assets_col.find_one({"id": asset_id})
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    if "fileData" not in asset:
+        raise HTTPException(status_code=404, detail="File content not found in this asset")
+
+    file_bytes = asset["fileData"]
+    mime_type = asset.get("mimeType", "application/octet-stream")
+    filename = asset.get("fileName", "download")
+
+    return Response(
+        content=file_bytes,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"'
+        }
+    )
