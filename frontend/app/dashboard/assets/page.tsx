@@ -55,7 +55,7 @@ import {
 import { toast } from "sonner"
 import { PinModal } from "@/components/dashboard/pin-modal"
 import { formatBytes, getCurrentUserId } from "@/lib/store"
-import { secureFetch } from "@/lib/api"
+import { secureFetch, API_BASE } from "@/lib/api"
 import type { DigitalAsset, Nominee } from "@/lib/store"
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -140,7 +140,7 @@ export default function AssetsPage() {
     setShowPassword(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const getAssetUrl = (path: string) => `http://localhost:8000${path}`
+  const getAssetUrl = (path: string) => `${API_BASE}${path}`
 
   // PIN Modal
   if (!pinVerified) {
@@ -209,7 +209,11 @@ export default function AssetsPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredAssets.map((asset) => {
             const Icon = typeIcons[asset.type] || FileText
-            const nominee = nominees.find((n) => n.id === asset.nomineeId)
+            const assetNomineeIds = asset.nomineeIds || (asset.nomineeId ? [asset.nomineeId] : [])
+            const assignedNominees = nominees.filter((n) => assetNomineeIds.includes(n.id))
+            const nomineeNames = assignedNominees.length > 0
+              ? assignedNominees.map((n) => n.name).join(", ")
+              : "Unassigned"
             const isMedia = ["image", "video"].includes(asset.type)
             const isFile = !!asset.filePaths
 
@@ -263,6 +267,11 @@ export default function AssetsPage() {
                         <DropdownMenuItem onClick={() => setViewAsset(asset)} className="gap-2 cursor-pointer">
                           <Eye className="h-4 w-4 text-primary" /> View Details
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/assets/add?edit=${asset.id}`} className="gap-2 cursor-pointer flex items-center w-full">
+                            <Pencil className="h-4 w-4 text-primary" /> Edit Asset
+                          </Link>
+                        </DropdownMenuItem>
                         {isFile && (
                           <DropdownMenuItem asChild>
                             <a href={getAssetUrl(asset.filePaths)} download className="gap-2 cursor-pointer flex items-center">
@@ -312,7 +321,7 @@ export default function AssetsPage() {
                   <div className="flex items-center justify-between border-t border-border/50 pt-3 text-[10px] font-medium text-muted-foreground">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      <span className="truncate">Inheritor: <span className="text-foreground">{nominee?.name || "Unassigned"}</span></span>
+                      <span className="truncate">Inheritor(s): <span className="text-foreground" title={nomineeNames}>{nomineeNames}</span></span>
                     </div>
                     <span className="shrink-0">{new Date(asset.createdAt).toLocaleDateString()}</span>
                   </div>
@@ -442,8 +451,16 @@ export default function AssetsPage() {
                       </div>
                     )}
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-muted-foreground flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Beneficiary</span>
-                      <span className="font-medium">{nominees.find(n => n.id === viewAsset.nomineeId)?.name || "Not set"}</span>
+                      <span className="text-muted-foreground flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Beneficiary(ies)</span>
+                      <span className="font-medium text-right max-w-[200px] truncate" title={(() => {
+                        const assetNomineeIds = viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
+                        return nominees.filter((n) => assetNomineeIds.includes(n.id)).map((n) => n.name).join(", ")
+                      })() || "Not set"}>
+                        {(() => {
+                          const assetNomineeIds = viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
+                          return nominees.filter((n) => assetNomineeIds.includes(n.id)).map((n) => n.name).join(", ")
+                        })() || "Not set"}
+                      </span>
                     </div>
                   </div>
                 </div>

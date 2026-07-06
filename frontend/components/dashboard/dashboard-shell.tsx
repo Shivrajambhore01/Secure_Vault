@@ -20,6 +20,8 @@ import {
   Crown,
   Sparkles,
   Zap,
+  Sun,
+  Moon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +35,7 @@ import {
 import { toast } from "sonner"
 import { getUser, isLoggedIn, setLoggedIn } from "@/lib/store"
 import { secureFetch } from "@/lib/api"
+import { useTheme } from "next-themes"
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -48,8 +51,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [user, setUser] = useState<any | null>(null)
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     if (!isLoggedIn()) {
       router.push("/login")
       return
@@ -97,15 +103,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 flex w-48 flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Shield className="h-4 w-4 text-sidebar-primary-foreground" />
+        <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary">
+            <Shield className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-sidebar-foreground">SecureVault</span>
+          <span className="text-base font-bold text-sidebar-foreground">SecureVault</span>
           <button
             className="ml-auto lg:hidden text-sidebar-foreground"
             onClick={() => setSidebarOpen(false)}
@@ -116,7 +122,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4">
+        <nav className="flex-1 px-2 py-4">
           <div className="flex flex-col gap-1">
             {navItems.map((item) => {
               const Icon = item.icon
@@ -126,7 +132,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${active
+                  className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all ${active
                     ? "bg-sidebar-accent text-sidebar-primary"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
@@ -140,10 +146,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Logout */}
-        <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-sidebar-border p-2">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-destructive"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />
             Logout
@@ -152,7 +158,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col lg:pl-48">
         {/* Top navbar */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur-xl sm:px-6">
           <button
@@ -172,6 +178,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
+            {mounted && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+            )}
 
             <Button
               variant="ghost"

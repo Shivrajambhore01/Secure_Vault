@@ -27,6 +27,7 @@ export interface DigitalAsset {
   fileName?: string
   fileSize?: number
   nomineeId?: string
+  nomineeIds?: string[]
   createdAt: string
   updatedAt: string
 }

@@ -119,32 +119,32 @@ export default function PricingPage() {
                                 </div>
                             )}
 
-                            <CardHeader className="pb-4">
-                                <div className={`mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted group-hover:bg-secondary transition-colors`}>
-                                    <Icon className={`h-6 w-6 ${plan.color}`} />
+                            <CardHeader className="pt-4 px-5 pb-2">
+                                <div className={`mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-muted group-hover:bg-secondary transition-colors`}>
+                                    <Icon className={`h-5 w-5 ${plan.color}`} />
                                 </div>
-                                <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                                <div className="mt-2 flex items-baseline gap-1">
-                                    <span className="text-4xl font-extrabold">{plan.price}</span>
-                                    <span className="text-muted-foreground">one-time</span>
+                                <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+                                <div className="mt-1 flex items-baseline gap-1">
+                                    <span className="text-3xl font-extrabold">{plan.price}</span>
+                                    <span className="text-xs text-muted-foreground">one-time</span>
                                 </div>
-                                <p className="mt-4 text-sm font-semibold text-primary">{plan.storage} Storage</p>
+                                <p className="mt-2 text-xs font-semibold text-primary">{plan.storage} Storage</p>
                             </CardHeader>
 
-                            <CardContent className="flex-1 pb-8">
-                                <ul className="space-y-3">
+                            <CardContent className="flex-1 px-5 py-2">
+                                <ul className="space-y-2">
                                     {plan.features.map((feature) => (
-                                        <li key={feature} className="flex gap-3 text-sm text-foreground">
-                                            <Check className="h-4 w-4 shrink-0 text-success" />
+                                        <li key={feature} className="flex gap-2.5 text-xs text-foreground">
+                                            <Check className="h-3.5 w-3.5 shrink-0 text-success" />
                                             {feature}
                                         </li>
                                     ))}
                                 </ul>
                             </CardContent>
 
-                            <CardFooter>
+                            <CardFooter className="px-5 pb-4 pt-0">
                                 <Button
-                                    className={`w-full h-12 text-sm font-bold transition-all ${isCurrent
+                                    className={`w-full h-10 text-xs font-bold transition-all ${isCurrent
                                         ? "bg-secondary text-muted-foreground cursor-default"
                                         : plan.id === "premium"
                                             ? "bg-amber-500 hover:bg-amber-600 text-white"

@@ -175,27 +175,35 @@ async def notify_nominees_for_user(user_id: str):
 async def process_reengagement_for_user(user_id: str):
     user = await users_col.find_one({"_id": ObjectId(user_id)})
 
-    if not user or not user.get("logoutTime"):
+    if not user:
+        return
+
+    # Skip if nominees have already been notified (cycle complete)
+    if user.get("nomineesNotified"):
         return
 
     test_mode = settings.INACTIVITY_TEST_MODE
     now = datetime.now(timezone.utc).timestamp() * 1000  # ms
-    logout_time = datetime.fromisoformat(user["logoutTime"].replace("Z", "+00:00")).timestamp() * 1000
-    elapsed = now - logout_time
+    
+    # Use lastActive (or fall back to createdAt)
+    last_active_str = user.get("lastActive") or user.get("createdAt")
+    last_active_time = datetime.fromisoformat(last_active_str.replace("Z", "+00:00")).timestamp() * 1000
+    elapsed = now - last_active_time
 
     if test_mode:
         # TEST WORKFLOW
-        # Notifications at 2, 4, and 6 minutes of inactivity.
-        # Twilio call triggered at 6 minutes of inactivity.
-        # Nominee access triggered at 8 minutes of inactivity.
+        # Notifications at 1, 2, and 3 minutes of inactivity.
+        # Twilio call triggered at 4 minutes of inactivity.
+        # Nominee access triggered at 5 minutes of inactivity.
         messages_sent = user.get("reEngagementMessagesSent", 0)
 
-        # 1. Send reminder emails at 2, 4, and 6 minutes
+        # 1. Send reminder emails at 1, 2, and 3 minutes
         if messages_sent < 3:
-            target_elapsed = (messages_sent + 1) * 2 * 60 * 1000
+            target_elapsed = (messages_sent + 1) * 1 * 60 * 1000
             if elapsed >= target_elapsed:
                 print(f"[RE-ENGAGEMENT-V4][TEST] Sending reminder message {messages_sent + 1} to {user['email']} (elapsed: {elapsed / 1000}s)...")
 
+                frontend_url = settings.FRONTEND_URL
                 html = f"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
                     <div style="text-align: center; margin-bottom: 24px;">
@@ -206,7 +214,7 @@ async def process_reengagement_for_user(user_id: str):
                     <p>We noticed you have been logged out due to inactivity. To ensure the continuous security and preservation of your vault assets, please log back into your account.</p>
                     <p>If you do not log in within the verification window, our automated protocols will begin designated nominee notification procedures.</p>
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="http://localhost:3000/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);">Log In to SecureVault</a>
+                        <a href="{frontend_url}/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);">Log In to SecureVault</a>
                     </div>
                     <p style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; margin-top: 24px;">
                         If you did not request this or have questions, please contact support immediately.
@@ -229,13 +237,13 @@ async def process_reengagement_for_user(user_id: str):
                 )
                 messages_sent += 1
 
-        # 2. Trigger automated phone call at 6 minutes (after 3rd notification sent)
-        if elapsed >= 6 * 60 * 1000 and messages_sent >= 3 and not user.get("reEngagementCallSent"):
+        # 2. Trigger automated phone call at 4 minutes (after 3rd notification sent)
+        if elapsed >= 4 * 60 * 1000 and messages_sent >= 3 and not user.get("reEngagementCallSent"):
             print(f"[RE-ENGAGEMENT-V4][TEST] Triggering re-engagement call for {user['email']} (elapsed: {elapsed / 1000}s)")
             await trigger_reengagement_call(user_id)
 
-        # 3. Trigger Nominee Access at 8 minutes (after 6 mins call + 2 mins verification period)
-        if elapsed >= 8 * 60 * 1000 and user.get("reEngagementCallSent") and not user.get("nomineesNotified"):
+        # 3. Trigger Nominee Access at 5 minutes (after 4 mins call + 1 min verification period)
+        if elapsed >= 5 * 60 * 1000 and user.get("reEngagementCallSent") and not user.get("nomineesNotified"):
             print(f"[RE-ENGAGEMENT-V4][TEST] Re-engagement cycle COMPLETED for {user['email']}. Notifying nominees...")
             await notify_nominees_for_user(user_id)
 
@@ -265,13 +273,14 @@ async def process_reengagement_for_user(user_id: str):
             if now - last_sent >= GAP:
                 print(f"[RE-ENGAGEMENT-V4] Sending reminder message to {user['email']}...")
 
+                frontend_url = settings.FRONTEND_URL
                 html = f"""
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     <h2 style="color: #3b82f6;">We miss you at SecureVault!</h2>
                     <p>Hello {user['fullName']},</p>
                     <p>It's been a while since you last logged in. We wanted to reach out and make sure your vault assets are still secure.</p>
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="http://localhost:3000/login" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to SecureVault</a>
+                        <a href="{frontend_url}/login" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to SecureVault</a>
                     </div>
                 </div>
                 """
@@ -306,18 +315,19 @@ async def process_reengagement_for_user(user_id: str):
 # ------------------------------------------------------------------
 async def _run_inactivity_check():
     try:
-        inactive_users = await users_col.find({"logoutTime": {"$ne": None}}).to_list(length=None)
-        print(f"[RE-ENGAGEMENT-V4] Found {len(inactive_users)} logged-out users to process.")
+        # Find all users who have not completed the nominee notification process
+        users_to_check = await users_col.find({"nomineesNotified": {"$ne": True}}).to_list(length=None)
+        print(f"[RE-ENGAGEMENT-V4] Found {len(users_to_check)} users to evaluate for inactivity.")
 
-        tasks = [process_reengagement_for_user(str(u["_id"])) for u in inactive_users]
+        tasks = [process_reengagement_for_user(str(u["_id"])) for u in users_to_check]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 print(f"[RE-ENGAGEMENT-V4] Error for user: {result}")
 
-        if inactive_users:
-            print(f"[RE-ENGAGEMENT-V4] Finished processing batch of {len(inactive_users)} users.")
+        if users_to_check:
+            print(f"[RE-ENGAGEMENT-V4] Finished processing batch of {len(users_to_check)} users.")
     except Exception as e:
         print(f"[RE-ENGAGEMENT-V4] Global Error: {e}")
 

@@ -50,6 +50,8 @@ const typeLabels: Record<string, string> = {
     "legal-file": "Legal File",
 }
 
+import { API_BASE, BASE_URL } from "@/lib/api"
+
 export default function NomineeVaultPage() {
     const params = useParams()
     const router = useRouter()
@@ -73,7 +75,7 @@ export default function NomineeVaultPage() {
             }
 
             try {
-                const response = await fetch(`http://localhost:8000/api/nominees/assets/${sessionToken}`)
+                const response = await fetch(`${BASE_URL}/nominees/assets/${sessionToken}`)
                 const data = await response.json()
 
                 if (response.ok) {
@@ -99,7 +101,10 @@ export default function NomineeVaultPage() {
         return matchesSearch && matchesType
     })
 
-    const getAssetUrl = (path: string) => `http://localhost:8000${path}`
+    const getAssetUrl = (path: string) => {
+        const sessionToken = sessionStorage.getItem(`sv_nominee_token_${token}`)
+        return `${API_BASE}${path}${sessionToken ? `?token=${sessionToken}` : ""}`
+    }
     const togglePassword = (id: string) => setShowPassword(prev => ({ ...prev, [id]: !prev[id] }))
 
     if (loading) {

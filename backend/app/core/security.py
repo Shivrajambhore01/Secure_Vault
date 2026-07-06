@@ -49,12 +49,51 @@ def generate_access_token(user_id: str, email: Optional[str] = None) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
-def generate_refresh_token(user_id: str, email: Optional[str] = None) -> str:
+async def generate_refresh_token(user_id: str, email: Optional[str] = None) -> str:
+    import secrets
+    from app.core.database import db
+    
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRY_DAYS)
-    payload = {"userId": user_id, "type": "refresh", "exp": expire}
+    jti = secrets.token_hex(16)
+    payload = {"userId": user_id, "type": "refresh", "exp": expire, "jti": jti}
     if email:
         payload["email"] = email
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+        
+    token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+    
+    # Store token in MongoDB
+    await db["refresh_tokens"].insert_one({
+        "_id": jti,
+        "userId": user_id,
+        "expiresAt": expire
+    })
+    return token
+
+
+async def revoke_refresh_token(jti: str):
+    from app.core.database import db
+    await db["refresh_tokens"].delete_one({"_id": jti})
+
+
+async def revoke_all_user_refresh_tokens(user_id: str):
+    from app.core.database import db
+    await db["refresh_tokens"].delete_many({"userId": user_id})
+
+
+async def verify_and_consume_refresh_token(token: str) -> dict:
+    from app.core.database import db
+    
+    decoded = decode_token(token)
+    if decoded.get("type") != "refresh" or not decoded.get("jti"):
+        raise JWTError("Invalid token type or missing jti")
+        
+    jti = decoded["jti"]
+    # Atomically verify and consume the token
+    result = await db["refresh_tokens"].find_one_and_delete({"_id": jti})
+    if not result:
+        raise JWTError("Token has been revoked or already used")
+        
+    return decoded
 
 
 def generate_reset_token(user_id: str, token_type: str) -> str:

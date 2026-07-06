@@ -17,12 +17,14 @@ export function clearAuthState() {
     }
 }
 
+import { BASE_URL } from "./api"
+
 /**
  * Check if user has valid session
  */
 export async function hasValidSession(): Promise<boolean> {
     try {
-        const response = await fetch('http://localhost:8000/api/auth/heartbeat', {
+        const response = await fetch(`${BASE_URL}/auth/heartbeat`, {
             method: 'POST',
             credentials: 'include'
         })
@@ -38,7 +40,7 @@ export async function hasValidSession(): Promise<boolean> {
 export async function forceLogout() {
     try {
         // Call logout API
-        await fetch('http://localhost:8000/api/auth/logout', {
+        await fetch(`${BASE_URL}/auth/logout`, {
             method: 'POST',
             credentials: 'include'
         })
