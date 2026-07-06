@@ -46,3 +46,32 @@ def decrypt(text: str) -> str:
     decrypted = unpadder.update(decrypted_padded) + unpadder.finalize()
 
     return decrypted.decode("utf-8")
+
+
+def encrypt_bytes(data: bytes) -> bytes:
+    """Encrypt raw bytes using AES-256-CBC. Returns iv + encrypted_data."""
+    iv = os.urandom(IV_LENGTH)
+    cipher = Cipher(algorithms.AES(ENCRYPTION_KEY), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(data) + padder.finalize()
+
+    encrypted = encryptor.update(padded_data) + encryptor.finalize()
+    return iv + encrypted
+
+
+def decrypt_bytes(data: bytes) -> bytes:
+    """Decrypt raw bytes from iv + encrypted_data format."""
+    iv = data[:IV_LENGTH]
+    encrypted_data = data[IV_LENGTH:]
+
+    cipher = Cipher(algorithms.AES(ENCRYPTION_KEY), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+
+    decrypted_padded = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    unpadder = padding.PKCS7(128).unpadder()
+    decrypted = unpadder.update(decrypted_padded) + unpadder.finalize()
+
+    return decrypted

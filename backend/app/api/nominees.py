@@ -165,8 +165,11 @@ async def get_nominee_assets(session_token: str):
     # Strictly fetch only assets assigned to this specific nominee
     assets = await assets_col.find({
         "userId": nominee["userId"],
-        "nomineeId": nominee["id"],
-    }).to_list(length=None)
+        "$or": [
+            {"nomineeId": nominee["id"]},
+            {"nomineeIds": nominee["id"]}
+        ]
+    }, {"fileData": 0}).to_list(length=None)
 
     # Serialize ObjectIds
     for a in assets:

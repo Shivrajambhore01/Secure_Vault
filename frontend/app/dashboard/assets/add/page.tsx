@@ -34,7 +34,7 @@ import {
   getUser,
   saveUser,
 } from "@/lib/store"
-import { secureFetch } from "@/lib/api"
+import { secureFetch, BASE_URL } from "@/lib/api"
 import type { Nominee } from "@/lib/store"
 
 const assetTypes = [
@@ -53,10 +53,11 @@ export default function AddAssetPage() {
   const [success, setSuccess] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
+  const [editId, setEditId] = useState<string | null>(null)
   const [type, setType] = useState<string>("")
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
-  const [nomineeId, setNomineeId] = useState<string>("")
+  const [selectedNomineeIds, setSelectedNomineeIds] = useState<string[]>([])
   const [content, setContent] = useState("") // For passwords/notes
 
   const [file, setFile] = useState<File | null>(null)
@@ -70,6 +71,27 @@ export default function AddAssetPage() {
         .then(res => res.json())
         .then(data => setNominees(data))
         .catch(() => toast.error("Failed to fetch nominees"))
+
+      const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
+      const edit = queryParams?.get("edit")
+      if (edit) {
+        setEditId(edit)
+        secureFetch(`/assets/${userId}`)
+          .then(res => res.json())
+          .then((assets: any[]) => {
+            const asset = assets.find(a => a.id === edit)
+            if (asset) {
+              setName(asset.name)
+              setType(asset.type)
+              setDescription(asset.description || "")
+              setSelectedNomineeIds(asset.nomineeIds || (asset.nomineeId ? [asset.nomineeId] : []))
+              setContent(asset.content || "")
+            } else {
+              toast.error("Asset not found")
+            }
+          })
+          .catch(() => toast.error("Failed to fetch asset details"))
+      }
     }
   }, [])
 
@@ -123,13 +145,14 @@ export default function AddAssetPage() {
       return
     }
 
-    if (!nomineeId) {
-      toast.error("Please assign a nominee")
+    if (selectedNomineeIds.length === 0) {
+      toast.error("Please assign at least one nominee")
       return
     }
 
     const needsFile = ["image", "video", "document", "legal-file"].includes(type)
-    if (needsFile && !file) {
+    const isEdit = !!editId
+    if (needsFile && !file && !isEdit) {
       toast.error(`Please upload a file for ${type} asset`)
       return
     }
@@ -144,8 +167,9 @@ export default function AddAssetPage() {
     const userId = getCurrentUserId()
     const user = getUser()
 
-    if (user && user.storageUsed >= user.storageLimit) {
+    if (!isEdit && user && user.storageUsed >= user.storageLimit) {
       toast.error("Storage limit reached! Please upgrade your plan.")
+      setLoading(false)
       return
     }
 
@@ -155,8 +179,9 @@ export default function AddAssetPage() {
       formData.append("name", name)
       formData.append("type", type)
       formData.append("description", description)
-      formData.append("nomineeId", nomineeId)
+      formData.append("nomineeIds", selectedNomineeIds.join(","))
 
+      if (editId) formData.append("id", editId)
       if (file) formData.append("file", file)
       if (content) formData.append("content", content)
 
@@ -164,7 +189,7 @@ export default function AddAssetPage() {
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.withCredentials = true // Send HttpOnly cookies
-        xhr.open("POST", "http://localhost:8000/api/assets", true)
+        xhr.open("POST", `${BASE_URL}/assets`, true)
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -194,7 +219,7 @@ export default function AddAssetPage() {
 
       setLoading(false)
       setSuccess(true)
-      toast.success("Asset encrypted and stored securely!")
+      toast.success(editId ? "Asset updated successfully!" : "Asset encrypted and stored securely!")
 
       setTimeout(() => {
         router.push("/dashboard/assets")
@@ -212,9 +237,13 @@ export default function AddAssetPage() {
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/20">
           <CheckCircle className="h-10 w-10 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Asset Secured!</h2>
+        <h2 className="text-2xl font-bold text-foreground">
+          {editId ? "Asset Updated!" : "Asset Secured!"}
+        </h2>
         <p className="text-sm text-muted-foreground text-center max-w-xs">
-          Your asset has been encrypted and stored in your secure vault.
+          {editId 
+            ? "Your changes have been encrypted and updated in your secure vault."
+            : "Your asset has been encrypted and stored in your secure vault."}
         </p>
       </div>
     )
@@ -223,15 +252,21 @@ export default function AddAssetPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">Add Digital Asset</h1>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          {editId ? "Edit Digital Asset" : "Add Digital Asset"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Securely encrypt and store documents, media, or credentials.
+          {editId 
+            ? "Modify your secured documents, credentials, or nominees."
+            : "Securely encrypt and store documents, media, or credentials."}
         </p>
       </div>
 
       <Card className="border-border bg-card/50 backdrop-blur-sm shadow-xl">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">Asset Configuration</CardTitle>
+          <CardTitle className="text-xl font-semibold text-foreground">
+            {editId ? "Update Asset Details" : "Asset Configuration"}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -243,12 +278,17 @@ export default function AddAssetPage() {
                 {assetTypes.map((t) => {
                   const Icon = t.icon
                   const isActive = type === t.value
+                  const isDisabled = editId && !isActive
+                  if (isDisabled) return null // Hide non-active categories on edit for cleaner UX
                   return (
                     <button
                       key={t.value}
                       type="button"
+                      disabled={editId ? true : false}
                       onClick={() => setType(t.value)}
-                      className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all hover:scale-105 ${isActive
+                      className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition-all ${
+                        editId ? "" : "hover:scale-105"
+                      } ${isActive
                         ? "border-primary bg-primary/10 text-primary shadow-lg ring-1 ring-primary"
                         : "border-border bg-background/50 text-muted-foreground hover:border-primary/50"
                         }`}
@@ -346,7 +386,14 @@ export default function AddAssetPage() {
                       </div>
                       <div className="text-center">
                         <p className="font-medium">Drop your {type} here</p>
-                        <p className="text-xs text-muted-foreground mt-1">or click to browse from files</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {editId ? "or click to browse to replace current file" : "or click to browse from files"}
+                        </p>
+                        {editId && (
+                          <p className="text-[10px] text-primary/70 mt-1 font-semibold">
+                            (Current file is already secured)
+                          </p>
+                        )}
                       </div>
                     </>
                   )}
@@ -366,20 +413,33 @@ export default function AddAssetPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label>Assign Beneficiary (Nominee)</Label>
+              <Label>Assign Beneficiaries (Nominees)</Label>
               {nominees.length > 0 ? (
-                <Select value={nomineeId} onValueChange={setNomineeId}>
-                  <SelectTrigger className="bg-background/50 border-border">
-                    <SelectValue placeholder="Who should inherit this?" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {nominees.map((n) => (
-                      <SelectItem key={n.id} value={n.id}>
-                        {n.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid gap-2 border border-border bg-background/30 rounded-xl p-4 max-h-[160px] overflow-y-auto">
+                  {nominees.map((n) => {
+                    const isChecked = selectedNomineeIds.includes(n.id)
+                    return (
+                      <label
+                        key={n.id}
+                        className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-secondary/40 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedNomineeIds([...selectedNomineeIds, n.id])
+                            } else {
+                              setSelectedNomineeIds(selectedNomineeIds.filter(id => id !== n.id))
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary bg-background/50"
+                        />
+                        <span className="text-sm font-medium text-foreground">{n.name} ({n.email})</span>
+                      </label>
+                    )
+                  })}
+                </div>
               ) : (
                 <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 flex flex-col gap-2">
                   <p className="text-sm font-medium text-warning">No Nominees Found</p>
@@ -405,7 +465,13 @@ export default function AddAssetPage() {
               disabled={loading || nominees.length === 0}
               className="w-full h-14 text-base font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Store in Secure Vault"}
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : editId ? (
+                "Update in Secure Vault"
+              ) : (
+                "Store in Secure Vault"
+              )}
             </Button>
           </form>
         </CardContent>

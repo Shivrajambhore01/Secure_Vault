@@ -88,17 +88,38 @@ User → Clear Cookies → Set logoutTime → Re-engagement Armed
 | 2 | Exposed credentials | 🔴 CRITICAL | Security breach | ✅ DOCUMENTED |
 | 3 | Weak JWT secret | 🔴 CRITICAL | Token forgery | ✅ FIXED |
 | 4 | Session timeout mismatch | 🔴 CRITICAL | UX issue | ✅ FIXED |
-| 5 | Dual state management | 🟡 HIGH | Auth bypass | ⚠️ DOCUMENTED |
-| 6 | No token invalidation | 🟡 HIGH | Session hijack | ⚠️ DOCUMENTED |
-| 7 | Token refresh race | 🟡 HIGH | Token storms | ✅ FIXED |
-| 8 | Missing CSRF tokens | 🟢 MEDIUM | CSRF attacks | ⚠️ DOCUMENTED |
-| 9 | No rate limiting | 🟢 MEDIUM | Brute force | ⚠️ DOCUMENTED |
-| 10 | Insecure dev cookies | 🟢 MEDIUM | Dev security | ⚠️ DOCUMENTED |
+| 5 | Inactivity Protocol Design Flaw | 🔴 CRITICAL | Heritage transfer fails on passive user exit | ⚠️ DOCUMENTED / NEEDS FIX |
+| 6 | Public File Download (IDOR) | 🔴 CRITICAL | Direct unauthenticated file downloads | ⚠️ DOCUMENTED / NEEDS FIX |
+| 7 | Unencrypted Files at Rest | 🟡 HIGH | DB breach leaks raw user files | ⚠️ DOCUMENTED |
+| 8 | Dual state management | 🟡 HIGH | Auth bypass | ⚠️ DOCUMENTED |
+| 9 | No token invalidation | 🟡 HIGH | Session hijack | ⚠️ DOCUMENTED |
+| 10 | Token refresh race | 🟡 HIGH | Token storms | ✅ FIXED |
+| 11 | Missing CSRF tokens | 🟢 MEDIUM | CSRF attacks | ⚠️ DOCUMENTED |
+| 12 | No rate limiting | 🟢 MEDIUM | Brute force | ⚠️ DOCUMENTED |
+| 13 | Insecure dev cookies | 🟢 MEDIUM | Dev security | ⚠️ DOCUMENTED |
 
 **Legend**:
 - ✅ FIXED: Code updated
 - ⚠️ NEEDS MANUAL FIX: Requires external action
 - ⚠️ DOCUMENTED: Fix documented in guides
+- ⚠️ DOCUMENTED / NEEDS FIX: Critical flaw identified in active code, requires code modification
+
+### 🕵️‍♂️ NEWLY IDENTIFIED VULNERABILITIES & FLAWS
+
+#### 1. Inactivity Protocol Logic Flaw (🔴 CRITICAL)
+- **Problem**: The re-engagement background task (`_run_inactivity_check` in `scheduler.py`) scans the database using `users_col.find({"logoutTime": {"$ne": None}})`. If a user passes away or stops logging in without explicitly clicking "Logout" (e.g. they close the browser tab or clear cookies), their `logoutTime` remains `None`. They will **never** be processed by the inactivity engine, and their nominees will **never** receive their assets.
+- **Impact**: Completely breaks the inheritance flow under the most common scenarios (passive inactivity due to death or incapacity).
+- **Remediation**: Re-architect the inactivity logic to trigger based on the difference between `lastActive` and the current timestamp (`datetime.now() - lastActive > inactivityPeriod`), regardless of `logoutTime`.
+
+#### 2. Public File Download IDOR (🔴 CRITICAL)
+- **Problem**: The backend route `/api/assets/file/{asset_id}` serving secure files directly from the database checks no cookies, tokens, or session dependencies. It is completely public. Anyone who discovers or guesses the `asset_id` can fetch raw files.
+- **Impact**: Direct leakage of encrypted heritage records (IDOR).
+- **Remediation**: Restrict the `/api/assets/file/{asset_id}` endpoint to check if the caller is the owner of the asset or has a validated nominee session token.
+
+#### 3. Unencrypted Files at Rest (🟡 HIGH)
+- **Problem**: Uploaded files are stored in MongoDB as raw binary bytes (`Binary(file_content)`). The vault does not encrypt files before saving them in the database.
+- **Impact**: If the MongoDB Atlas database is breached, the attacker gains direct access to all raw documents (PDFs, credentials, legal papers).
+- **Remediation**: Encrypt the file payload using AES-256 before inserting it into the database, using a server key or a derivative of the user's password.
 
 ---
 
@@ -502,12 +523,12 @@ Total Files Analyzed: 50+
 Lines of Code: ~10,000
 Backend Files: 15
 Frontend Files: 30+
-Critical Issues Found: 4
-High Priority Issues: 3
+Critical Issues Found: 6
+High Priority Issues: 4
 Medium Priority Issues: 3
-Fixes Applied: 4
+Fixes Applied: 6
 Documentation Created: 3 guides
-Estimated Fix Time: 6-8 hours
+Estimated Fix Time: 8-10 hours
 ```
 
 ---
@@ -524,20 +545,25 @@ SecureVault is a well-architected application with solid foundations:
 - ✅ Session timeout fixed
 - ✅ JWT security strengthened
 - ✅ Token refresh race condition fixed
+- ✅ Digital Asset dropdown query serialization fixed
+- ✅ Nominee assigned count check logic fixed
 - ⚠️ Google OAuth needs manual configuration
 
 **Next steps for production readiness**:
-1. Configure Google OAuth (5 minutes)
-2. Implement token blacklist (1 hour)
-3. Add rate limiting (1 hour)
-4. Complete security testing (8 hours)
-5. Deploy with HTTPS and production configs
+- ⚠️ Fix Inactivity Protocol Scan Flaw: Re-architect scanner to trigger on `lastActive` elapsed time.
+- ⚠️ Secure File Downloads: Protect `/api/assets/file/{asset_id}` with auth dependencies.
+- ⚠️ Implement Encrypted Storage-at-Rest: Encrypt binary files before storing in MongoDB.
+- Configure Google OAuth (5 minutes).
+- Implement token blacklist (1 hour).
+- Add rate limiting (1 hour).
+- Complete security testing (8 hours).
+- Deploy with HTTPS and production configs.
 
 **Overall assessment**: READY FOR DEVELOPMENT, NEEDS SECURITY HARDENING FOR PRODUCTION
 
 ---
 
-**Generated**: June 14, 2026  
-**By**: Kiro AI Assistant  
+**Generated**: July 06, 2026  
+**By**: Antigravity AI Pair Programmer  
 **Project**: SecureVault Digital Asset Inheritance Platform  
-**Version**: 1.0.0
+**Version**: 1.1.0

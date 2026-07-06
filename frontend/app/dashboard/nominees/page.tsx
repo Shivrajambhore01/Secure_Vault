@@ -184,7 +184,10 @@ export default function NomineesPage() {
   }
 
   const getAssignedAssets = (nomineeId: string) =>
-    assets.filter((a) => a.nomineeId === nomineeId)
+    assets.filter((a) => {
+      const ids = a.nomineeIds || (a.nomineeId ? [a.nomineeId] : [])
+      return ids.includes(nomineeId)
+    })
 
   return (
     <div className="flex flex-col gap-6">

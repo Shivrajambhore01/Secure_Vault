@@ -37,14 +37,18 @@ app = FastAPI(
 # ------------------------------------------------------------------
 # CORS (matches Express config)
 # ------------------------------------------------------------------
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://10.27.46.5:3000",   # Current network IP (from dev server)
+    "http://172.27.90.5:3000",  # Previous network IP (fallback)
+]
+if settings.FRONTEND_URL not in allowed_origins:
+    allowed_origins.append(settings.FRONTEND_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://10.27.46.5:3000",   # Current network IP (from dev server)
-        "http://172.27.90.5:3000",  # Previous network IP (fallback)
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],

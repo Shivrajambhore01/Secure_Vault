@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { InactivityTracker } from '@/components/auth/inactivity-tracker'
 // import { SessionTimeoutTracker } from '@/components/auth/session-timeout-tracker' // DISABLED: Session timeout removed
 import { GoogleAuthProvider } from '@/components/providers/google-auth-provider'
+import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -45,16 +46,23 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <GoogleAuthProvider>
-          {children}
-          {/* <SessionTimeoutTracker /> */}
-          <InactivityTracker />
-          <Toaster richColors position="top-right" />
-          <Analytics />
-        </GoogleAuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+        >
+          <GoogleAuthProvider>
+            {children}
+            {/* <SessionTimeoutTracker /> */}
+            <InactivityTracker />
+            <Toaster richColors position="top-right" />
+            <Analytics />
+          </GoogleAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
 }
+

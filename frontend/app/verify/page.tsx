@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { getUser, saveUser } from "@/lib/store"
 
+import { BASE_URL } from "@/lib/api"
+
 function VerifyContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -23,7 +25,7 @@ function VerifyContent() {
 
         const verifyEmail = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/auth/verify-email?token=${token}`)
+                const response = await fetch(`${BASE_URL}/auth/verify-email?token=${token}`)
                 const data = await response.json()
 
                 if (response.ok) {

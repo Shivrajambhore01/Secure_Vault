@@ -2,14 +2,18 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Shield, Menu, X } from "lucide-react"
+import { Shield, Menu, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "next-themes"
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener("scroll", onScroll)
     return () => window.removeEventListener("scroll", onScroll)
@@ -48,6 +52,17 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
+          {mounted && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="text-muted-foreground hover:text-foreground mr-1"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          )}
           <Link href="/login">
             <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
               Login
@@ -87,6 +102,17 @@ export function Navbar() {
               FAQ
             </a>
             <div className="flex gap-3 pt-2">
+              {mounted && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  aria-label="Toggle theme"
+                  className="shrink-0"
+                >
+                  {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </Button>
+              )}
               <Link href="/login" className="flex-1">
                 <Button variant="outline" className="w-full">Login</Button>
               </Link>
@@ -100,3 +126,4 @@ export function Navbar() {
     </header>
   )
 }
+
