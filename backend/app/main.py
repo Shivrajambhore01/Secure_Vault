@@ -43,11 +43,12 @@ allowed_origins = [
     "http://10.27.46.5:3000",   # Current network IP (from dev server)
     "http://172.27.90.5:3000",  # Previous network IP (fallback)
 ]
-frontend_url_clean = settings.FRONTEND_URL.rstrip('/')
+frontend_url_clean = settings.FRONTEND_URL.strip("\"'").rstrip('/')
 if frontend_url_clean not in allowed_origins:
     allowed_origins.append(frontend_url_clean)
 if settings.FRONTEND_URL not in allowed_origins:
     allowed_origins.append(settings.FRONTEND_URL)
+print("ALLOWED CORS ORIGINS:", allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,
