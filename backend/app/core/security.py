@@ -114,23 +114,53 @@ def decode_token(token: str) -> dict:
 
 def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
     """Set HttpOnly auth cookies on the response."""
-    is_production = settings.NODE_ENV == "production"
+    is_production = (
+        settings.NODE_ENV == "production" or
+        "onrender.com" in settings.FRONTEND_URL or
+        "vercel.app" in settings.FRONTEND_URL
+    )
+
+    samesite_policy = "none" if is_production else "lax"
+    secure_cookie = True if is_production else False
 
     response.set_cookie(
         key="accessToken",
         value=access_token,
         httponly=True,
-        secure=is_production,
-        samesite="strict",
+        secure=secure_cookie,
+        samesite=samesite_policy,
         max_age=settings.ACCESS_TOKEN_EXPIRY_MINUTES * 60,
     )
     response.set_cookie(
         key="refreshToken",
         value=refresh_token,
         httponly=True,
-        secure=is_production,
-        samesite="strict",
+        secure=secure_cookie,
+        samesite=samesite_policy,
         max_age=7 * 24 * 60 * 60,  # 7 days
+    )
+
+
+def delete_auth_cookies(response: Response):
+    """Delete HttpOnly auth cookies from the response with matching security settings."""
+    is_production = (
+        settings.NODE_ENV == "production" or
+        "onrender.com" in settings.FRONTEND_URL or
+        "vercel.app" in settings.FRONTEND_URL
+    )
+
+    samesite_policy = "none" if is_production else "lax"
+    secure_cookie = True if is_production else False
+
+    response.delete_cookie(
+        "accessToken",
+        secure=secure_cookie,
+        samesite=samesite_policy,
+    )
+    response.delete_cookie(
+        "refreshToken",
+        secure=secure_cookie,
+        samesite=samesite_policy,
     )
 
 

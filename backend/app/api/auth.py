@@ -25,6 +25,7 @@ from app.core.security import (
     generate_reset_token,
     decode_token,
     set_auth_cookies,
+    delete_auth_cookies,
     get_current_user,
     revoke_refresh_token,
     revoke_all_user_refresh_tokens,
@@ -1056,8 +1057,7 @@ async def refresh_token(request: Request, response: Response):
         # verify_and_consume_refresh_token checks database and atomically consumes token
         decoded = await verify_and_consume_refresh_token(token)
     except Exception as e:
-        response.delete_cookie("accessToken")
-        response.delete_cookie("refreshToken")
+        delete_auth_cookies(response)
         raise HTTPException(status_code=403, detail=f"Invalid or expired refresh token: {e}")
 
     user_id = decoded["userId"]
@@ -1186,8 +1186,7 @@ async def logout(request: Request, response: Response, current_user: dict = Depe
     user_agent = request.headers.get("user-agent", "unknown")
     await write_audit_log(user_id, "LOGOUT", "SUCCESS", client_ip, user_agent)
 
-    response.delete_cookie("accessToken")
-    response.delete_cookie("refreshToken")
+    delete_auth_cookies(response)
     return {"message": "Logged out successfully"}
 
 
