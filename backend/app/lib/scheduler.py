@@ -182,13 +182,19 @@ async def process_reengagement_for_user(user_id: str):
     if user.get("nomineesNotified"):
         return
 
+    # Skip if user has re-logged in (logoutTime cleared on login)
+    logout_time_str = user.get("logoutTime")
+    if not logout_time_str:
+        print(f"[RE-ENGAGEMENT-V4] Skipping {user.get('email')} — user is currently logged in (no logoutTime).")
+        return
+
     test_mode = settings.INACTIVITY_TEST_MODE
     now = datetime.now(timezone.utc).timestamp() * 1000  # ms
-    
-    # Use lastActive (or fall back to createdAt)
-    last_active_str = user.get("lastActive") or user.get("createdAt")
-    last_active_time = datetime.fromisoformat(last_active_str.replace("Z", "+00:00")).timestamp() * 1000
-    elapsed = now - last_active_time
+
+    # Measure elapsed time from logoutTime (not lastActive)
+    # This ensures heartbeat or other updates don't reset the countdown
+    logout_time = datetime.fromisoformat(logout_time_str.replace("Z", "+00:00")).timestamp() * 1000
+    elapsed = now - logout_time
 
     if test_mode:
         # TEST WORKFLOW
@@ -210,7 +216,7 @@ async def process_reengagement_for_user(user_id: str):
                         <span style="font-size: 28px; font-weight: bold; color: #3b82f6;">🔒 SecureVault</span>
                     </div>
                     <h2 style="color: #0f172a; font-size: 20px; margin-top: 0; text-align: center;">Inactivity Alert</h2>
-                    <p>Dear {user['fullName']},</p>
+                    <p>Dear {user.get('fullName', 'User')},</p>
                     <p>We noticed you have been logged out due to inactivity. To ensure the continuous security and preservation of your vault assets, please log back into your account.</p>
                     <p>If you do not log in within the verification window, our automated protocols will begin designated nominee notification procedures.</p>
                     <div style="text-align: center; margin: 30px 0;">
@@ -223,19 +229,19 @@ async def process_reengagement_for_user(user_id: str):
                 """
 
                 try:
-                    await _send_email(user["email"], "SecureVault: Inactivity Security Alert", html)
-                    print(f"[RE-ENGAGEMENT-V4][TEST] Reminder email sent to {user['email']}")
+                    await _send_email(user.get("email", ""), "SecureVault: Inactivity Security Alert", html)
+                    print(f"[RE-ENGAGEMENT-V4][TEST] Reminder email sent to {user.get('email')}")
+
+                    await users_col.update_one(
+                        {"_id": ObjectId(user_id)},
+                        {
+                            "$inc": {"reEngagementMessagesSent": 1},
+                            "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
+                    messages_sent += 1
                 except Exception as e:
                     print(f"[RE-ENGAGEMENT-V4][TEST] Failed to send reminder: {e}")
-
-                await users_col.update_one(
-                    {"_id": ObjectId(user_id)},
-                    {
-                        "$inc": {"reEngagementMessagesSent": 1},
-                        "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
-                    },
-                )
-                messages_sent += 1
 
         # 2. Trigger automated phone call at 4 minutes (after 3rd notification sent)
         if elapsed >= 4 * 60 * 1000 and messages_sent >= 3 and not user.get("reEngagementCallSent"):
@@ -277,7 +283,7 @@ async def process_reengagement_for_user(user_id: str):
                 html = f"""
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
                     <h2 style="color: #3b82f6;">We miss you at SecureVault!</h2>
-                    <p>Hello {user['fullName']},</p>
+                    <p>Hello {user.get('fullName', 'User')},</p>
                     <p>It's been a while since you last logged in. We wanted to reach out and make sure your vault assets are still secure.</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{frontend_url}/login" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to SecureVault</a>
@@ -286,18 +292,18 @@ async def process_reengagement_for_user(user_id: str):
                 """
 
                 try:
-                    await _send_email(user["email"], "SecureVault: Re-Engagement Reminder", html)
-                    print(f"[RE-ENGAGEMENT-V4] Reminder email sent to {user['email']}")
+                    await _send_email(user.get("email", ""), "SecureVault: Re-Engagement Reminder", html)
+                    print(f"[RE-ENGAGEMENT-V4] Reminder email sent to {user.get('email')}")
+
+                    await users_col.update_one(
+                        {"_id": ObjectId(user_id)},
+                        {
+                            "$inc": {"reEngagementMessagesSent": 1},
+                            "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
+                        },
+                    )
                 except Exception as e:
                     print(f"[RE-ENGAGEMENT-V4] Failed to send reminder: {e}")
-
-                await users_col.update_one(
-                    {"_id": ObjectId(user_id)},
-                    {
-                        "$inc": {"reEngagementMessagesSent": 1},
-                        "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
-                    },
-                )
 
         elif elapsed >= (WAIT_PERIOD + DURATION):
             print(f"[RE-ENGAGEMENT-V4] Re-engagement cycle COMPLETED for {user['email']}.")
@@ -315,9 +321,13 @@ async def process_reengagement_for_user(user_id: str):
 # ------------------------------------------------------------------
 async def _run_inactivity_check():
     try:
-        # Find all users who have not completed the nominee notification process
-        users_to_check = await users_col.find({"nomineesNotified": {"$ne": True}}).to_list(length=None)
-        print(f"[RE-ENGAGEMENT-V4] Found {len(users_to_check)} users to evaluate for inactivity.")
+        # Only process users who are currently logged out (logoutTime is set)
+        # and have not yet completed the nominee notification cycle
+        users_to_check = await users_col.find({
+            "nomineesNotified": {"$ne": True},
+            "logoutTime": {"$ne": None, "$exists": True}
+        }).to_list(length=None)
+        print(f"[RE-ENGAGEMENT-V4] Found {len(users_to_check)} logged-out users to evaluate for inactivity.")
 
         tasks = [process_reengagement_for_user(str(u["_id"])) for u in users_to_check]
         results = await asyncio.gather(*tasks, return_exceptions=True)
