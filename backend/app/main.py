@@ -12,6 +12,10 @@ from app.core.database import verify_connection
 from app.api.auth import router as auth_router
 from app.api.assets import router as assets_router
 from app.api.nominees import router as nominees_router
+from app.api.admin_auth import router as admin_auth_router
+from app.api.admin import router as admin_router
+from app.api.verification import router as verification_router
+from app.api.verification_submit import router as verification_submit_router
 from app.lib.scheduler import start_inactivity_scheduler
 
 settings = get_settings()
@@ -73,6 +77,17 @@ app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 app.include_router(assets_router, prefix="/api/assets", tags=["Assets"])
 app.include_router(nominees_router, prefix="/api/nominees", tags=["Nominees"])
 
+# ------------------------------------------------------------------
+# Admin Routes (completely separate from user routes)
+# ------------------------------------------------------------------
+app.include_router(admin_auth_router, prefix="/api/admin/auth", tags=["Admin Auth"])
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
+app.include_router(verification_router, prefix="/api/admin/verification", tags=["Verification Admin"])
+
+# ------------------------------------------------------------------
+# Nominee Verification Submission
+# ------------------------------------------------------------------
+app.include_router(verification_submit_router, prefix="/api/verification", tags=["Verification Submit"])
 
 @app.get("/")
 async def root():

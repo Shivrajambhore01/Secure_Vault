@@ -29,10 +29,14 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(default="", alias="NEXT_PUBLIC_GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = ""
 
-    # JWT
+    # JWT (User)
     JWT_SECRET: str = Field(..., description="JWT signing secret - REQUIRED")
     ACCESS_TOKEN_EXPIRY_MINUTES: int = 60  # 1 hour
     REFRESH_TOKEN_EXPIRY_DAYS: int = 7
+
+    # JWT (Admin) — completely separate secret so user tokens cannot access admin routes
+    ADMIN_JWT_SECRET: str = Field(..., description="Admin JWT signing secret - REQUIRED")
+    ADMIN_JWT_EXPIRY_MINUTES: int = 120  # 2 hours
 
     # Inactivity
     INACTIVITY_TEST_MODE: bool = False
