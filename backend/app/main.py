@@ -16,7 +16,12 @@ from app.api.admin_auth import router as admin_auth_router
 from app.api.admin import router as admin_router
 from app.api.verification import router as verification_router
 from app.api.verification_submit import router as verification_submit_router
-from app.lib.scheduler import start_inactivity_scheduler
+from app.api.verification_workflow import router as verification_workflow_router
+from app.api.health import router as health_router
+from app.api.dual_approval import router as dual_approval_router
+from app.lib.enterprise_scheduler import start_inactivity_scheduler
+from app.lib.rate_limit import GlobalRateLimitMiddleware
+from app.lib.idempotency import IdempotencyMiddleware
 
 settings = get_settings()
 
@@ -60,8 +65,35 @@ app.add_middleware(
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Client-Timezone"],
 )
+
+# ------------------------------------------------------------------
+# Security Headers Middleware
+# ------------------------------------------------------------------
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Injects security headers on every response."""
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        return response
+
+if settings.ENABLE_SECURITY_HEADERS:
+    app.add_middleware(SecurityHeadersMiddleware)
+
+# ------------------------------------------------------------------
+# Rate Limiting Middleware
+# ------------------------------------------------------------------
+app.add_middleware(GlobalRateLimitMiddleware)
+app.add_middleware(IdempotencyMiddleware)
 
 # ------------------------------------------------------------------
 # Static files (uploads)
@@ -85,13 +117,29 @@ app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(verification_router, prefix="/api/admin/verification", tags=["Verification Admin"])
 
 # ------------------------------------------------------------------
-# Nominee Verification Submission
+# Nominee Verification Submission (legacy simple submit)
 # ------------------------------------------------------------------
 app.include_router(verification_submit_router, prefix="/api/verification", tags=["Verification Submit"])
 
+# ------------------------------------------------------------------
+# Nominee Verification Workflow (multi-step inheritance verification)
+# ------------------------------------------------------------------
+app.include_router(verification_workflow_router, prefix="/api/verification", tags=["Verification Workflow"])
+
 @app.get("/")
 async def root():
-    return {"message": "SecureVault Backend API is running..."}
+    return {"message": "SecureVault Backend API is running...", "version": "2.0.0"}
+
+
+# ------------------------------------------------------------------
+# Health & Monitoring Routes
+# ------------------------------------------------------------------
+app.include_router(health_router, prefix="", tags=["Monitoring"])
+
+# ------------------------------------------------------------------
+# Dual Approval (CRITICAL risk claims require two separate admins)
+# ------------------------------------------------------------------
+app.include_router(dual_approval_router, prefix="/api/admin/verification", tags=["Dual Approval"])
 
 
 if __name__ == "__main__":

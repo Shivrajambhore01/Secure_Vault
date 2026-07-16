@@ -10,7 +10,7 @@ backend_process = None
 frontend_process = None
 
 def cleanup(signum, frame):
-    print("\n🛑 Shutting down servers...")
+    print("\n[SHUTDOWN] Shutting down servers...", flush=True)
     if backend_process:
         backend_process.terminate()
     if frontend_process:
@@ -20,7 +20,7 @@ def cleanup(signum, frame):
 signal.signal(signal.SIGINT, cleanup)
 signal.signal(signal.SIGTERM, cleanup)
 
-print("🚀 Starting SecureVault servers...")
+print("[STARTING] Starting SecureVault servers...", flush=True)
 
 backend_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
@@ -47,7 +47,7 @@ def stream_output(process, prefix):
         line = process.stdout.readline()
         if not line:
             break
-        print(f"[{prefix}] {line.rstrip()}")
+        print(f"[{prefix}] {line.rstrip()}", flush=True)
 
 import threading
 threading.Thread(target=stream_output, args=(backend_process, "BACKEND"), daemon=True).start()

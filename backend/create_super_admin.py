@@ -78,7 +78,7 @@ async def create_super_admin(email: str, full_name: str, password: str):
     result = await admins_col.insert_one(admin_doc)
 
     print("\n" + "=" * 60)
-    print("  ✅  SUPER ADMIN CREATED SUCCESSFULLY")
+    print("  [SUCCESS] SUPER ADMIN CREATED SUCCESSFULLY")
     print("=" * 60)
     print(f"  ID       : {admin_doc['id']}")
     print(f"  Name     : {admin_doc['fullName']}")
@@ -87,8 +87,8 @@ async def create_super_admin(email: str, full_name: str, password: str):
     print(f"  Status   : {admin_doc['status']}")
     print(f"  MongoDB  : _id={result.inserted_id}")
     print("=" * 60)
-    print("\n  ➡  Login at: http://localhost:3000/admin/login")
-    print("  ⚠  Keep these credentials secure!\n")
+    print("\n  -> Login at: http://localhost:3000/admin/login")
+    print("  [WARNING] Keep these credentials secure!\n")
 
     client.close()
 

@@ -29,6 +29,7 @@ import {
   assignVerification,
   reviewVerification,
   getVerificationFileUrl,
+  getVerificationDocumentUrl,
   VerificationDetail
 } from "@/lib/verification-api"
 import { VerificationStatusBadge } from "@/components/admin/verification-status-badge"
@@ -256,18 +257,68 @@ export default function VerificationDetailPage() {
             </CardContent>
           </Card>
 
-          {/* AI Score Placeholder */}
-          <Card className="border-border bg-card border-dashed">
-            <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="p-3 bg-violet-500/10 rounded-full">
-                <Activity className="w-6 h-6 text-violet-500" />
+          {/* Risk Analysis Card */}
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <Activity className="w-4 h-4 text-violet-400" />
+                Risk Analysis & Fraud Scoring
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center bg-background/40 p-3 rounded-lg border border-border">
+                <span className="text-xs text-muted-foreground">Calculated Risk Score</span>
+                <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded ${
+                  (v.riskScore || 0) > 60 
+                    ? "bg-red-500/10 text-red-400" 
+                    : (v.riskScore || 0) > 30 
+                      ? "bg-amber-500/10 text-amber-400" 
+                      : "bg-emerald-500/10 text-emerald-400"
+                }`}>
+                  {v.riskScore !== null ? `${v.riskScore} / 100` : "PENDING"}
+                </span>
               </div>
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">AI Forgery Detection</h4>
-                <p className="text-xs text-muted-foreground mt-1">Automated analysis pending or unavailable.</p>
-              </div>
+              {v.riskScore !== null && (
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  {v.riskScore > 60 
+                    ? "⚠️ High discrepancy detected. Verify extracted document details match user record name exactly."
+                    : v.riskScore > 30 
+                      ? "⚡ Medium risk warning. Check document validity and obituary notice match."
+                      : "✅ Low risk match profile. ID details align with nomination parameters."}
+                </p>
+              )}
             </CardContent>
           </Card>
+
+          {/* OCR Extracted Data Card */}
+          {v.ocrData && (
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                  <User className="w-4 h-4 text-primary" />
+                  ID Document OCR Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs space-y-2 text-muted-foreground">
+                <div className="flex justify-between pb-1 border-b border-border/40">
+                  <span>Document Type</span> 
+                  <span className="text-foreground uppercase">{v.ocrData.documentType?.replace("_", " ")}</span>
+                </div>
+                <div className="flex justify-between pb-1 border-b border-border/40">
+                  <span>Extracted Name</span> 
+                  <span className="text-foreground font-semibold">{v.ocrData.fullName}</span>
+                </div>
+                <div className="flex justify-between pb-1 border-b border-border/40">
+                  <span>DOB</span> 
+                  <span className="text-foreground font-mono">{v.ocrData.dateOfBirth}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Document Number</span> 
+                  <span className="text-foreground font-mono">{v.ocrData.documentNumber}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Audit Timeline */}
           <Card className="border-border bg-card">
@@ -325,18 +376,42 @@ export default function VerificationDetailPage() {
             </CardHeader>
             <CardContent className="flex-1 p-6 space-y-8">
               
-              {/* Death Certificate */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  Death Certificate (Primary Proof)
-                </h3>
-                <VerificationDocumentViewer
-                  label="Death Certificate"
-                  url={v.certificateFile ? getVerificationFileUrl(v.id, "certificate") : null}
-                  fileName={v.certificateFile?.fileName}
-                  mimeType={v.certificateFile?.mimeType}
-                />
+              {/* Death Evidence Collection */}
+              <div className="space-y-6">
+                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Death evidence Documents</h3>
+                
+                {v.deathEvidence && v.deathEvidence.length > 0 ? (
+                  <div className="space-y-6">
+                    {v.deathEvidence.map((doc: any, idx: number) => (
+                      <div key={idx} className="space-y-2.5">
+                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${doc.isPreferred ? "bg-emerald-500" : "bg-amber-500"}`} />
+                          {doc.documentType.replace(/_/g, " ")} {doc.isPreferred ? "(Preferred)" : "(Alternative)"}
+                        </h4>
+                        <VerificationDocumentViewer
+                          label={doc.documentType.replace(/_/g, " ")}
+                          url={getVerificationDocumentUrl(v.id, doc.documentId)}
+                          fileName={doc.fileName}
+                          mimeType={doc.mimeType || "application/pdf"}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Fallback for legacy requests
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                      Death Certificate (Legacy Submission)
+                    </h3>
+                    <VerificationDocumentViewer
+                      label="Death Certificate"
+                      url={v.certificateFile ? getVerificationFileUrl(v.id, "certificate") : null}
+                      fileName={v.certificateFile?.fileName}
+                      mimeType={v.certificateFile?.mimeType}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Govt ID */}
@@ -350,7 +425,7 @@ export default function VerificationDetailPage() {
                     </h3>
                     <VerificationDocumentViewer
                       label="Government ID"
-                      url={getVerificationFileUrl(v.id, "governmentId")}
+                      url={getVerificationDocumentUrl(v.id, v.governmentIdFile.id || v.governmentIdFile._id)}
                       fileName={v.governmentIdFile.fileName}
                       mimeType={v.governmentIdFile.mimeType}
                     />
@@ -358,7 +433,26 @@ export default function VerificationDetailPage() {
                 </>
               )}
 
-              {/* Relationship Proof */}
+              {/* Selfie File */}
+              {v.selfieFile && (
+                <>
+                  <Separator className="bg-border my-8" />
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      Biometric Selfie
+                    </h3>
+                    <VerificationDocumentViewer
+                      label="Biometric Selfie"
+                      url={getVerificationDocumentUrl(v.id, v.selfieFile.id || v.selfieFile._id)}
+                      fileName={v.selfieFile.fileName}
+                      mimeType={v.selfieFile.mimeType}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Relationship Proof (Legacy) */}
               {v.relationshipProofFile && (
                 <>
                   <Separator className="bg-border my-8" />
@@ -369,7 +463,7 @@ export default function VerificationDetailPage() {
                     </h3>
                     <VerificationDocumentViewer
                       label="Relationship Proof"
-                      url={getVerificationFileUrl(v.id, "relationshipProof")}
+                      url={getVerificationDocumentUrl(v.id, v.relationshipProofFile.id || v.relationshipProofFile._id)}
                       fileName={v.relationshipProofFile.fileName}
                       mimeType={v.relationshipProofFile.mimeType}
                     />

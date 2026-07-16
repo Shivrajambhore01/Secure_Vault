@@ -27,8 +27,9 @@ from app.lib.encryption import decrypt_bytes
 router = APIRouter()
 
 # Collections
-verifications_col = db["death_verifications"]
-verification_audit_col = db["verification_audit_logs"]
+verifications_col = db["verification_requests"]
+verification_documents_col = db["verification_documents"]
+verification_audit_col = db["verification_logs"]
 users_col = db["users"]
 nominees_col = db["nominees"]
 admins_col = db["admins"]
@@ -49,7 +50,8 @@ class ReviewRequest(BaseModel):
 ALLOWED_ROLES = ("VERIFICATION_ADMIN", "SUPER_ADMIN")
 
 VALID_STATUSES = {
-    "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "MORE_DOCUMENTS_REQUIRED"
+    "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "MORE_DOCUMENTS_REQUIRED",
+    "CLAIMED", "COOLING_PERIOD", "HALTED", "NOMINEE_NOTIFIED", "PENDING_REVIEW"
 }
 
 
@@ -195,7 +197,7 @@ async def get_verification_stats(
     current_admin: dict = Depends(require_role(*ALLOWED_ROLES)),
 ):
     """Return aggregate stats for the verification dashboard."""
-    pending = await verifications_col.count_documents({"status": "PENDING"})
+    pending = await verifications_col.count_documents({"status": {"$in": ["PENDING", "PENDING_REVIEW"]}})
     under_review = await verifications_col.count_documents({"status": "UNDER_REVIEW"})
 
     # Approved/Rejected today
@@ -375,8 +377,22 @@ async def get_verification_detail(
         if reviewer:
             reviewer["_id"] = str(reviewer["_id"])
 
+    # For compatibility: populate file metadata from separate documents collection
+    docs_cursor = verification_documents_col.find({"requestId": verification_id}, {"data": 0})
+    db_docs = await docs_cursor.to_list(length=100)
+    for doc in db_docs:
+        doc["_id"] = str(doc["_id"])
+        if doc["documentType"] in ("DEATH_CERTIFICATE", "DEATH_REGISTRATION") and not v.get("certificateFile"):
+            v["certificateFile"] = doc
+        elif doc["documentType"] == "GOVT_ID" and not v.get("governmentIdFile"):
+            v["governmentIdFile"] = doc
+        elif doc["documentType"] == "SUPPORTING_EVIDENCE" and not v.get("relationshipProofFile"):
+            v["relationshipProofFile"] = doc
+        elif doc["documentType"] == "SELFIE" and not v.get("selfieFile"):
+            v["selfieFile"] = doc
+
     # Strip binary data from file fields (keep metadata)
-    for key in ("certificateFile", "governmentIdFile", "relationshipProofFile"):
+    for key in ("certificateFile", "governmentIdFile", "relationshipProofFile", "selfieFile"):
         if v.get(key) and isinstance(v[key], dict):
             v[key] = {k: val for k, val in v[key].items() if k != "data"}
 
@@ -426,12 +442,23 @@ async def get_verification_file(
     if file_type not in field_map:
         raise HTTPException(status_code=400, detail=f"Invalid file type. Must be one of: {', '.join(field_map.keys())}")
 
-    field = field_map[file_type]
-    v = await verifications_col.find_one({"id": verification_id})
-    if not v:
-        raise HTTPException(status_code=404, detail="Verification request not found.")
+    doc_type_map = {
+        "certificate": "DEATH_CERTIFICATE",
+        "governmentId": "GOVT_ID",
+        "relationshipProof": "SUPPORTING_EVIDENCE",
+    }
+    doc_type = doc_type_map.get(file_type)
 
-    file_obj = v.get(field)
+    # Try finding in the separate documents collection first
+    file_obj = await verification_documents_col.find_one({"requestId": verification_id, "documentType": doc_type})
+
+    if not file_obj:
+        # Fallback to checking legacy embedded files
+        v = await verifications_col.find_one({"id": verification_id})
+        if v:
+            field = field_map[file_type]
+            file_obj = v.get(field)
+
     if not file_obj or not isinstance(file_obj, dict) or not file_obj.get("data"):
         raise HTTPException(status_code=404, detail=f"No {file_type} file found for this request.")
 
@@ -445,6 +472,36 @@ async def get_verification_file(
 
     mime_type = file_obj.get("mimeType", "application/octet-stream")
     filename = file_obj.get("fileName", f"{file_type}_document")
+
+    return Response(
+        content=file_bytes,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"',
+        },
+    )
+
+
+@router.get("/requests/{verification_id}/document/{document_id}")
+async def get_verification_document_by_id(
+    verification_id: str,
+    document_id: str,
+    current_admin: dict = Depends(require_role(*ALLOWED_ROLES)),
+):
+    """Stream any verification document file by its unique ID (decrypted on-the-fly)."""
+    file_obj = await verification_documents_col.find_one({"requestId": verification_id, "id": document_id})
+    if not file_obj:
+        raise HTTPException(status_code=404, detail="Verification document not found.")
+
+    file_bytes = file_obj["data"]
+    try:
+        file_bytes = decrypt_bytes(file_bytes)
+    except Exception as e:
+        print(f"[Verification] Decryption error for doc {document_id}: {e}")
+        raise HTTPException(status_code=500, detail="Error decrypting verification document.")
+
+    mime_type = file_obj.get("mimeType", "application/octet-stream")
+    filename = file_obj.get("fileName", "document")
 
     return Response(
         content=file_bytes,
@@ -470,10 +527,10 @@ async def assign_verification(
     if not v:
         raise HTTPException(status_code=404, detail="Verification request not found.")
 
-    if v["status"] not in ("PENDING", "MORE_DOCUMENTS_REQUIRED"):
+    if v["status"] not in ("PENDING", "PENDING_REVIEW", "MORE_DOCUMENTS_REQUIRED"):
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot assign request with status '{v['status']}'. Only PENDING or MORE_DOCUMENTS_REQUIRED requests can be assigned.",
+            detail=f"Cannot assign request with status '{v['status']}'. Only PENDING, PENDING_REVIEW, or MORE_DOCUMENTS_REQUIRED requests can be assigned.",
         )
 
     now = datetime.now(timezone.utc).isoformat()

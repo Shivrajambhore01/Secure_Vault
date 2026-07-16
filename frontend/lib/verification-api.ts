@@ -80,3 +80,7 @@ export function getVerificationFileUrl(id: string, fileType: "certificate" | "go
   // Using the absolute API base url
   return `${ADMIN_BASE_URL}/verification/requests/${id}/file/${fileType}`
 }
+
+export function getVerificationDocumentUrl(requestId: string, documentId: string) {
+  return `${ADMIN_BASE_URL}/verification/requests/${requestId}/document/${documentId}`
+}
