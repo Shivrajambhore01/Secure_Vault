@@ -1,21 +1,58 @@
+# ============================================================
+# SecureVault Backend — Python Dependencies
+# ============================================================
+# Install: pip install -r requirements.txt
+# Python: 3.12+
+# ============================================================
+
+# ─── Web Framework ──────────────────────────────────────────
 fastapi==0.115.12
 uvicorn[standard]==0.34.3
-motor==3.7.1
-pymongo==4.12.1
-pydantic==2.11.3
+starlette==0.46.2
+python-multipart==0.0.20         # multipart/form-data (file uploads)
+
+# ─── Database ───────────────────────────────────────────────
+motor==3.7.1                     # Async MongoDB driver
+pymongo==4.12.1                  # Sync MongoDB + BSON Binary type
+
+# ─── Configuration & Environment ────────────────────────────
+pydantic==2.13.4
 pydantic-settings==2.9.1
-python-jose[cryptography]==3.4.0
-passlib[bcrypt]==1.7.4
-bcrypt==4.3.0
-python-multipart==0.0.20
 python-dotenv==1.1.0
-httpx==0.28.1
-cryptography==45.0.3
-aiosmtplib==3.0.2
-email-validator==2.2.0
-pyotp==2.9.0
-qrcode[pil]==8.2
-google-auth==2.40.3
-apscheduler==3.11.0
-twilio==9.6.2
-aiofiles==24.1.0
+
+# ─── Authentication & Security ──────────────────────────────
+python-jose[cryptography]==3.4.0 # JWT signing & verification
+passlib[bcrypt]==1.7.4           # Password hashing context
+bcrypt==4.3.0                    # Bcrypt backend for passlib
+cryptography==48.0.0             # AES-256-GCM, HKDF, CBC encryption
+
+# ─── Email ──────────────────────────────────────────────────
+aiosmtplib==3.0.2                # Async SMTP email sending
+email-validator==2.2.0           # Email address validation
+
+# ─── SMS / Voice (Twilio) ───────────────────────────────────
+twilio==9.6.2                    # Twilio SMS & Studio Voice Calls
+
+# ─── Google OAuth ───────────────────────────────────────────
+google-auth==2.40.3              # Google token verification
+google-auth-oauthlib==1.4.0      # OAuth 2.0 flow
+google-auth-httplib2==0.4.0      # httplib2 transport for google-auth
+
+# ─── OTP / 2FA ──────────────────────────────────────────────
+pyotp==2.9.0                     # TOTP/HOTP one-time passwords
+qrcode[pil]==8.2                 # QR code generation for 2FA setup
+
+# ─── Image Processing ───────────────────────────────────────
+pillow==10.3.0                   # PIL — required by qrcode[pil]
+
+# ─── HTTP Client ────────────────────────────────────────────
+httpx==0.28.1                    # Async HTTP client (GeoIP lookups, OAuth)
+
+# ─── File I/O ───────────────────────────────────────────────
+aiofiles==24.1.0                 # Async file read/write (local storage backend)
+
+# ─── Background Jobs ────────────────────────────────────────
+apscheduler==3.11.0              # Async background job scheduler (8 enterprise jobs)
+
+# ─── System Monitoring ──────────────────────────────────────
+psutil==6.1.1                    # CPU, RAM, disk metrics for /health/metrics endpoint

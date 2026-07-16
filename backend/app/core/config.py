@@ -29,16 +29,49 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = Field(default="", alias="NEXT_PUBLIC_GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = ""
 
-    # JWT
+    # JWT (User)
     JWT_SECRET: str = Field(..., description="JWT signing secret - REQUIRED")
     ACCESS_TOKEN_EXPIRY_MINUTES: int = 60  # 1 hour
     REFRESH_TOKEN_EXPIRY_DAYS: int = 7
 
+    # JWT (Admin) — completely separate secret so user tokens cannot access admin routes
+    ADMIN_JWT_SECRET: str = Field(..., description="Admin JWT signing secret - REQUIRED")
+    ADMIN_JWT_EXPIRY_MINUTES: int = 120  # 2 hours
+
     # Inactivity
     INACTIVITY_TEST_MODE: bool = False
 
+    # Death Verification Workflow
+    # Set COOLING_PERIOD_DAYS=0 in .env for instant testing (skips 30-day wait)
+    COOLING_PERIOD_DAYS: int = 30
+    VERIFICATION_OTP_MAX_ATTEMPTS: int = 3
+    VERIFICATION_OTP_EXPIRY_MINUTES: int = 10
+
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+
+    # Object Storage Backend
+    # Options: 'mongodb' (default), 'local' (dev filesystem), 'minio', 's3'
+    # MongoDB is the current production backend — no extra services needed.
+    # Switch to 'minio' or 's3' when file volume requires dedicated object storage.
+    STORAGE_BACKEND: str = "mongodb"
+    STORAGE_BUCKET: str = "securevault-documents"
+
+    # MinIO / S3 Credentials (used when STORAGE_BACKEND=minio or s3)
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_SECURE: bool = False
+
+    # Redis (used for rate limiting and caching when available)
+    REDIS_URL: str = ""
+
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = 60
+    OTP_RATE_LIMIT_PER_HOUR: int = 5
+
+    # Security Headers
+    ENABLE_SECURITY_HEADERS: bool = True
 
     # Environment
     NODE_ENV: str = "development"
