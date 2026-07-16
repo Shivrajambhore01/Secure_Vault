@@ -16,7 +16,8 @@ import {
   MoreVertical
 } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -188,79 +189,114 @@ export default function VerificationDashboardPage() {
               ))}
             </div>
           ) : requests.length === 0 ? (
-            <div className="py-12 text-center flex flex-col items-center">
-              <div className="bg-muted/30 p-4 rounded-full mb-4">
-                <FileSearch className="w-8 h-8 text-muted-foreground" />
+            <div className="py-16 text-center flex flex-col items-center justify-center gap-6 rounded-[20px] border border-dashed border-border/60 bg-glass backdrop-blur-md p-8 max-w-xl mx-auto shadow-sm animate-in fade-in slide-in-from-bottom-5 duration-700">
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/5 border border-primary/10">
+                <FileSearch className="w-10 h-10 text-primary animate-pulse" />
               </div>
-              <h3 className="text-lg font-medium text-foreground mb-1">No requests found</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                {searchQuery || statusFilter !== "ALL" 
-                  ? "Try adjusting your filters or search query to find what you're looking for." 
-                  : "There are currently no death verification requests in the system."}
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-foreground">No Requests Found</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                  {searchQuery || statusFilter !== "ALL" 
+                    ? "No death verification requests match your search criteria. Try modifying your filter tabs or search terms." 
+                    : "All verification queues are completely clear! There are currently no pending nominee request claims in the system."}
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-muted-foreground uppercase bg-muted/30 border-b border-border">
-                    <tr>
-                      <th className="px-6 py-4 font-medium">Owner & Nominee</th>
-                      <th className="px-6 py-4 font-medium">Status & Priority</th>
-                      <th className="px-6 py-4 font-medium">Submitted</th>
-                      <th className="px-6 py-4 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {requests.map((req) => (
-                      <tr 
-                        key={req.id} 
-                        className="bg-card hover:bg-muted/20 transition-colors cursor-pointer group"
-                        onClick={() => navigateToDetail(req.id)}
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {requests.map((req) => {
+                // Calculate risk score based on priority
+                const riskScore = req.priority === "HIGH" ? 78 : req.priority === "MEDIUM" ? 42 : 15
+                const riskLabel = req.priority === "HIGH" ? "High" : req.priority === "MEDIUM" ? "Medium" : "Low"
+                const riskColor = req.priority === "HIGH" ? "text-red-500 bg-red-500/10 border-red-500/20" : req.priority === "MEDIUM" ? "text-amber-500 bg-amber-500/10 border-amber-500/20" : "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+
+                // Calculate progress based on uploaded files
+                let uploadedCount = 0
+                if (req.certificateFile) uploadedCount++
+                if (req.governmentIdFile) uploadedCount++
+                if (req.relationshipProofFile) uploadedCount++
+                const progressPct = Math.round((uploadedCount / 3) * 100)
+
+                // Map status
+                let mappedStatus: string = req.status
+                if (req.status === "MORE_DOCUMENTS_REQUIRED") {
+                  mappedStatus = "more_documents_required"
+                }
+
+                return (
+                  <Card 
+                    key={req.id} 
+                    onClick={() => navigateToDetail(req.id)}
+                    className="group flex flex-col justify-between"
+                  >
+                    {/* Header: Request ID & Status Badge */}
+                    <CardHeader className="flex items-center justify-between border-b border-border/10">
+                      <div className="flex items-center gap-2">
+                        <FileSearch className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-sm font-bold">REQ-{req.id.slice(-6).toUpperCase()}</CardTitle>
+                      </div>
+                      <StatusBadge status={mappedStatus} className="px-2 py-0.5 text-[9px]" />
+                    </CardHeader>
+
+                    {/* Body Content */}
+                    <CardContent className="flex flex-col gap-4 py-5 flex-grow text-xs leading-relaxed text-muted-foreground">
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span>Owner Name</span>
+                          <span className="font-bold text-foreground flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {req.ownerName}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Nominee Claimant</span>
+                          <span className="font-bold text-foreground">{req.nomineeName} ({req.nomineeRelation})</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Risk Assessment</span>
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${riskColor}`}>
+                            {riskScore}/100 • {riskLabel}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Submitted Date</span>
+                          <span className="font-semibold text-foreground">{formatDate(req.createdAt)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Admin Assigned</span>
+                          <span className="font-bold text-foreground">{req.reviewedBy || "Unassigned"}</span>
+                        </div>
+                      </div>
+
+                      {/* Verification Progress */}
+                      <div className="space-y-2 border-t border-border/10 pt-4 mt-auto font-sans">
+                        <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          <span>Verification Progress</span>
+                          <span>{uploadedCount}/3 Documents</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-secondary/50 overflow-hidden">
+                          <div 
+                            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-primary transition-all duration-500" 
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+
+                    {/* Footer Actions */}
+                    <CardFooter className="flex justify-end border-t border-border/10 py-3 bg-secondary/5">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs text-primary hover:text-primary/80 gap-1 rounded-xl"
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex items-center gap-2 text-foreground font-medium">
-                              <User className="w-4 h-4 text-muted-foreground" />
-                              {req.ownerName}
-                            </div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-2">
-                              <span className="opacity-50">↳</span> 
-                              <span>{req.nomineeName}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] uppercase font-semibold">
-                                {req.nomineeRelation}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col items-start gap-2">
-                            <VerificationStatusBadge status={req.status} />
-                            {req.priority === "HIGH" && req.status === "PENDING" && (
-                              <Badge variant="outline" className="text-[10px] border-red-500/30 text-red-500 bg-red-500/10">
-                                URGENT (&gt;7 days)
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                          {formatDate(req.createdAt)}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Review
-                            <ChevronRight className="w-4 h-4 ml-1" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        Review Request
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </CardContent>

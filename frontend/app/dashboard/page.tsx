@@ -118,48 +118,57 @@ export default function DashboardOverview() {
 
   const getNomineeColor = (index: number) => {
     const colors = [
-      "bg-sky-500/10 text-sky-500 border-sky-500/30",
-      "bg-violet-500/10 text-violet-500 border-violet-500/30",
-      "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
-      "bg-amber-500/10 text-amber-500 border-amber-500/30",
+      "bg-sky-500/10 text-sky-500 border-sky-500/30 shadow-[0_0_10px_rgba(14,165,233,0.15)]",
+      "bg-violet-500/10 text-violet-500 border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.15)]",
+      "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]",
+      "bg-amber-500/10 text-amber-500 border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
     ]
     return colors[index % colors.length]
   }
 
+  const assetTypeHoverClasses: Record<string, string> = {
+    document: "hover:border-sky-500/40 hover:bg-sky-500/5 hover:shadow-[0_0_15px_rgba(14,165,233,0.1)]",
+    password: "hover:border-amber-500/40 hover:bg-amber-500/5 hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]",
+    "crypto-key": "hover:border-indigo-500/40 hover:bg-indigo-500/5 hover:shadow-[0_0_15px_rgba(99,102,241,0.1)]",
+    image: "hover:border-rose-500/40 hover:bg-rose-500/5 hover:shadow-[0_0_15px_rgba(244,63,94,0.1)]",
+    "legal-file": "hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)]",
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-1 sm:p-2">
-      <div className="relative overflow-hidden rounded-3xl border border-white/5 dark:border-white/5 bg-linear-to-br from-indigo-500/15 via-primary/5 to-purple-500/10 p-6 md:p-8 shadow-xs">
-        <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl" />
+    <div className="flex flex-col gap-8 p-1 sm:p-2 bg-dot-grid min-h-screen">
+      {/* Premium Welcome Hero Panel */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-indigo-500/15 via-primary/5 to-purple-500/10 p-8 md:p-10 shadow-xl backdrop-blur-md">
+        <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-primary/20 blur-3xl animate-pulse" style={{ animationDuration: "6s" }} />
+        <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-indigo-500/20 blur-3xl animate-pulse" style={{ animationDuration: "8s" }} />
         
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500 border border-emerald-500/20 shadow-xs">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-4 py-1.5 text-xs font-bold text-emerald-500 border border-emerald-500/20 shadow-md">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              Vault Secure • Active Protection
+              Vault Secure • Active Real-Time Protection
             </div>
             
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
+            <h1 className="text-3xl font-black tracking-tight text-foreground md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-primary">
               Welcome back{user ? `, ${user.fullName.split(" ")[0]}` : ""}
             </h1>
-            <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
-              Manage your digital assets, set up secure heritage protocols, and keep your legacy completely protected.
+            <p className="max-w-xl text-sm md:text-base text-muted-foreground leading-relaxed">
+              Configure your secure digital heritage, archive critical assets, and define trusted transfer conditions.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4 shrink-0">
             <Link href="/dashboard/assets/add">
-              <Button className="h-11 rounded-xl bg-primary text-primary-foreground font-semibold shadow-md hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 duration-200">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Asset
+              <Button className="h-12 rounded-xl bg-primary text-primary-foreground font-bold shadow-lg hover:shadow-primary/20 hover:bg-primary/95 transition-all hover:scale-[1.03] active:scale-[0.98] duration-200 px-6">
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Secure New Asset
               </Button>
             </Link>
             <Link href="/dashboard/nominees">
-              <Button variant="outline" className="h-11 rounded-xl border-border bg-card/50 backdrop-blur-xs font-semibold hover:bg-secondary/80 transition-all hover:scale-105 active:scale-95 duration-200">
-                <UserPlus className="mr-2 h-4 w-4 text-muted-foreground" />
+              <Button variant="outline" className="h-12 rounded-xl border-border bg-card/40 backdrop-blur-md font-bold hover:bg-secondary/80 transition-all hover:scale-[1.03] active:scale-[0.98] duration-200 px-6 text-foreground">
+                <UserPlus className="mr-2 h-5 w-5 text-muted-foreground" />
                 Assign Nominee
               </Button>
             </Link>
@@ -167,35 +176,38 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-6 lg:grid-cols-12">
-        <Card className="md:col-span-6 lg:col-span-8 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-2">
+      {/* Bento Grid */}
+      <div className="grid gap-8 md:grid-cols-6 lg:grid-cols-12">
+        {/* Cell 1: Inventory (Bento Big Cell) */}
+        <Card className="md:col-span-6 lg:col-span-8 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between p-6">
+          <CardHeader className="pb-4 p-0">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <FolderKey className="h-5 w-5 text-primary" />
+              <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+                <FolderKey className="h-6 w-6 text-primary" />
                 Vault Inventory
               </CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/25 border-none font-semibold px-2.5 py-0.5">
-                {assets.length} Total Assets
+              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none font-bold px-3 py-1 text-xs rounded-full">
+                {assets.length} Assets Archived
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
+          <CardContent className="flex-1 flex flex-col justify-center p-0 mt-4">
             {assets.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-5">
                 {Object.entries(typeIcons).map(([type, Icon]) => {
                   const count = assetTypeCounts[type] || 0;
                   const colors = typeColors[type] || "text-muted-foreground bg-muted";
+                  const hoverGlow = assetTypeHoverClasses[type] || "hover:border-border";
                   return (
                     <div 
                       key={type} 
-                      className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-300 hover:-translate-y-1 hover:shadow-xs ${colors} ${count > 0 ? "opacity-100" : "opacity-40"}`}
+                      className={`flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-300 hover:-translate-y-1.5 cursor-pointer bg-card/20 backdrop-blur-xs ${colors} ${hoverGlow} ${count > 0 ? "opacity-100 border-border" : "opacity-35 border-transparent"}`}
                     >
-                      <Icon className="h-6 w-6 mb-2" />
-                      <span className="text-[11px] font-bold capitalize text-center leading-none tracking-tight">
+                      <Icon className="h-8 w-8 mb-3" />
+                      <span className="text-xs font-bold capitalize text-center leading-none tracking-tight">
                         {type.replace("-", " ")}
                       </span>
-                      <span className="text-xl font-extrabold mt-2 leading-none">
+                      <span className="text-2xl font-black mt-3 leading-none">
                         {count}
                       </span>
                     </div>
@@ -203,11 +215,16 @@ export default function DashboardOverview() {
                 })}
               </div>
             ) : (
-              <div className="flex h-36 flex-col items-center justify-center gap-3 text-center">
-                <FolderKey className="h-10 w-10 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">Your secure vault is empty</p>
+              <div className="flex h-44 flex-col items-center justify-center gap-4 text-center">
+                <div className="p-4 rounded-full bg-muted/20 border border-border/40">
+                  <FolderKey className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Your secure vault is empty</p>
+                  <p className="text-xs text-muted-foreground mt-1">Start encrypting files or keys to populate your inventory.</p>
+                </div>
                 <Link href="/dashboard/assets/add">
-                  <Button size="sm" className="gap-2 bg-primary text-primary-foreground font-semibold">
+                  <Button size="sm" className="gap-2 bg-primary text-primary-foreground font-bold rounded-lg shadow-sm px-4">
                     <PlusCircle className="h-4 w-4" />
                     Secure Your First Asset
                   </Button>
@@ -217,73 +234,78 @@ export default function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-4 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+        {/* Cell 2: Premium Tier (Bento Right Top Cell) */}
+        <Card className={`md:col-span-3 lg:col-span-4 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl duration-300 rounded-2xl flex flex-col justify-between p-6 ${
+          user?.plan === "premium" 
+            ? "glow-card-premium holo-gradient-premium animate-border-shimmer" 
+            : user?.plan === "pro" 
+              ? "glow-card-pro holo-gradient-pro" 
+              : "glow-card-free holo-gradient-free"
+        }`}>
+          <CardHeader className="pb-2 p-0">
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+              <Shield className="h-6 w-6 text-primary" />
               Vault Tier
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className={`relative overflow-hidden rounded-xl border p-4 flex flex-col justify-between min-h-[110px] ${
-              user?.plan === "premium" 
-                ? "bg-gradient-to-br from-amber-500/10 via-background to-background border-amber-500/30 text-amber-500" 
-                : user?.plan === "pro" 
-                  ? "bg-gradient-to-br from-blue-500/10 via-background to-background border-blue-500/30 text-blue-500" 
-                  : "bg-secondary/40 border-border text-foreground"
-            }`}>
+          <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4">
+            <div className={`relative overflow-hidden rounded-2xl border p-5 flex flex-col justify-between min-h-[120px] bg-card/10 backdrop-blur-md border-white/5`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xs uppercase font-extrabold tracking-widest text-muted-foreground">Current Plan</h3>
-                  <p className="text-3xl font-extrabold mt-1 tracking-tight capitalize">
+                  <h3 className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Current Plan</h3>
+                  <p className="text-3xl font-black mt-1 tracking-tight capitalize bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-primary">
                     {user?.plan || "Free"}
                   </p>
                 </div>
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-background border ${
-                  user?.plan === "premium" ? "border-amber-500/20 text-amber-500 shadow-amber-500/5 shadow-md" : user?.plan === "pro" ? "border-blue-500/20 text-blue-500 shadow-blue-500/5 shadow-md" : "border-border text-muted-foreground"
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-background/60 border backdrop-blur-lg shadow-md ${
+                  user?.plan === "premium" ? "border-amber-500/30 text-amber-500 shadow-amber-500/5" : user?.plan === "pro" ? "border-blue-500/30 text-blue-500 shadow-blue-500/5" : "border-border text-muted-foreground"
                 }`}>
-                  {user?.plan === "premium" ? <Crown className="h-5 w-5" /> : user?.plan === "pro" ? <Zap className="h-5 w-5" /> : <Shield className="h-5 w-5" />}
+                  {user?.plan === "premium" ? <Crown className="h-6 w-6 animate-pulse" /> : user?.plan === "pro" ? <Zap className="h-6 w-6 animate-pulse" /> : <Shield className="h-6 w-6" />}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                {user?.plan === "premium" ? "Ultimate access. 24/7 priority legacy transfers active." : user?.plan === "pro" ? "Extended storage limits and additional nominees active." : "Standard legacy storage with free features."}
+              <p className="text-xs text-muted-foreground mt-4 leading-relaxed font-medium">
+                {user?.plan === "premium" ? "Unlimited access. Priority multi-node legacy transfers active." : user?.plan === "pro" ? "Extended storage limits and dual-nominee release active." : "Standard legacy storage with free features."}
               </p>
             </div>
             
-            <Link href="/dashboard/pricing" className="w-full">
-              <Button variant="ghost" size="sm" className="w-full text-xs font-semibold text-primary hover:text-primary/80 justify-between">
-                <span>Manage Subscription</span>
-                <ArrowRight className="h-3 w-3" />
+            <Link href="/dashboard/pricing" className="w-full mt-4 block">
+              <Button variant="ghost" size="sm" className="w-full text-xs font-bold text-primary hover:text-primary/80 justify-between px-2.5 py-2 hover:bg-secondary/40 rounded-xl transition-all">
+                <span>Manage & Upgrade Plan</span>
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-4 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <HardDrive className="h-5 w-5 text-primary" />
+        {/* Cell 3: Secure Storage (Bento Middle Left Cell) */}
+        <Card className="md:col-span-3 lg:col-span-4 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between p-6">
+          <CardHeader className="pb-2 p-0">
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+              <HardDrive className="h-6 w-6 text-primary" />
               Secure Storage
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4 space-y-4">
             <div className="flex items-baseline justify-between">
-              <p className="text-3xl font-extrabold tracking-tight">
+              <p className="text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
                 {formatBytes(storage)}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground font-semibold">
                 of {formatBytes(totalLimit)} Limit
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Progress 
-                value={storagePercentage} 
-                className="h-2.5 bg-secondary [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-indigo-500" 
-              />
-              <div className="flex justify-between text-[11px] font-bold">
+            <div className="space-y-3">
+              {/* Premium Progress Bar */}
+              <div className="relative w-full h-3 rounded-full bg-secondary/50 overflow-hidden border border-white/5">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-primary transition-all duration-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]" 
+                  style={{ width: `${storagePercentage}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs font-bold">
                 <span className={storagePercentage > 90 ? "text-destructive" : "text-primary"}>
-                  {Math.round(storagePercentage)}% Used
+                  {Math.round(storagePercentage)}% Capacity Used
                 </span>
                 <span className="text-muted-foreground font-semibold">
                   {formatBytes(totalLimit - storage)} Free
@@ -291,24 +313,25 @@ export default function DashboardOverview() {
               </div>
             </div>
             
-            <p className="text-[11px] text-muted-foreground leading-normal">
-              Encrypted files are divided, hashed, and distributed safely in cloud storage clusters.
+            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
+              Encrypted vault segments are hashed and distributed across decentralized cloud infrastructure.
             </p>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-4 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+        {/* Cell 4: Nominees (Bento Middle Center Cell) */}
+        <Card className="md:col-span-3 lg:col-span-4 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between p-6">
+          <CardHeader className="pb-2 p-0">
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+              <Users className="h-6 w-6 text-primary" />
               Active Nominees
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4 space-y-4">
             {nominees.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex -space-x-2.5 overflow-hidden py-1">
-                  {nominees.slice(0, 4).map((nominee, idx) => {
+              <div className="space-y-4">
+                <div className="flex -space-x-3 overflow-hidden py-2">
+                  {nominees.slice(0, 5).map((nominee, idx) => {
                     const initials = nominee.name
                       .split(" ")
                       .map((n) => n[0])
@@ -318,7 +341,7 @@ export default function DashboardOverview() {
                     return (
                       <div
                         key={nominee.id}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-background font-extrabold text-xs shadow-sm hover:translate-y-[-2px] transition-transform ${getNomineeColor(
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-background font-black text-xs shadow-md hover:translate-y-[-4px] hover:scale-105 hover:z-10 transition-all cursor-pointer ${getNomineeColor(
                           idx
                         )}`}
                         title={nominee.name}
@@ -327,22 +350,27 @@ export default function DashboardOverview() {
                       </div>
                     )
                   })}
-                  {nominees.length > 4 && (
-                    <div className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-secondary text-secondary-foreground font-bold text-xs">
-                      +{nominees.length - 4}
+                  {nominees.length > 5 && (
+                    <div className="inline-flex h-11 w-11 items-center justify-center rounded-full border-2 border-background bg-secondary text-secondary-foreground font-black text-xs shadow-md">
+                      +{nominees.length - 5}
                     </div>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground leading-relaxed">
-                  Your assets are assigned to <strong className="text-foreground">{nominees.length} nominee{nominees.length > 1 ? "s" : ""}</strong>. They will only receive access following the inactivity trigger.
+                <div className="text-xs text-muted-foreground leading-relaxed font-medium">
+                  Your assets are assigned to <strong className="text-foreground">{nominees.length} nominee{nominees.length > 1 ? "s" : ""}</strong>. They will securely acquire access credentials only following verified inactivity triggers.
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-2 text-center gap-2">
-                <Users className="h-8 w-8 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground">No nominees designated yet</p>
+              <div className="flex flex-col items-center justify-center py-3 text-center gap-3">
+                <div className="p-3 rounded-full bg-muted/20 border border-border/40">
+                  <Users className="h-7 w-7 text-muted-foreground/30" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">No nominees designated yet</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Secure your assets by assigning a trusted legacy nominee.</p>
+                </div>
                 <Link href="/dashboard/nominees">
-                  <Button size="sm" variant="outline" className="h-8 text-xs font-semibold">
+                  <Button size="sm" variant="outline" className="h-8 text-xs font-bold rounded-lg px-3">
                     Set Up Heritage
                   </Button>
                 </Link>
@@ -350,65 +378,77 @@ export default function DashboardOverview() {
             )}
 
             <Link href="/dashboard/nominees" className="w-full block">
-              <Button variant="ghost" size="sm" className="w-full text-xs font-semibold text-primary hover:text-primary/80 justify-between p-0">
+              <Button variant="ghost" size="sm" className="w-full text-xs font-bold text-primary hover:text-primary/80 justify-between px-2.5 py-2 hover:bg-secondary/40 rounded-xl transition-all">
                 <span>Manage Nominees</span>
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 lg:col-span-4 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
+        {/* Cell 5: Inactivity (Bento Middle Right Cell) */}
+        <Card className="md:col-span-3 lg:col-span-4 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between p-6">
+          <CardHeader className="pb-2 p-0">
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+              <Clock className="h-6 w-6 text-primary" />
               Inactivity Trigger
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4 space-y-4">
             <div>
-              <p className="text-3xl font-extrabold tracking-tight text-foreground">
+              <p className="text-3xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
                 {user ? `${user.inactivityPeriod} Months` : "—"}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground font-semibold mt-0.5">
                 Maximum Inactivity Window
               </p>
             </div>
             
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-emerald-500 font-bold">Protocol Standby</span>
-                <span className="text-muted-foreground">100% Reset</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-emerald-500 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                  Protocol Standby
+                </span>
+                <span className="text-muted-foreground font-semibold">100% Reset</span>
               </div>
-              <Progress value={100} className="h-2 bg-secondary [&>div]:bg-emerald-500" />
+              <Progress value={100} className="h-2 bg-secondary/50 [&>div]:bg-emerald-500" />
             </div>
 
-            <p className="text-[11px] text-muted-foreground leading-normal">
-              Logging into SecureVault automatically resets this timer. Heritage instructions are launched if the timer hits 0.
+            <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
+              Every login automatically resets this timer. Heritage transfer launches if countdown is breached without authentication.
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12 mt-2">
-        <Card className="lg:col-span-5 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+      {/* Grid Bottom Section */}
+      <div className="grid gap-8 lg:grid-cols-12 mt-2">
+        {/* Cell 6: Vault Integrity Score */}
+        <Card className="lg:col-span-5 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl p-6">
+          <CardHeader className="pb-4 p-0">
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+              <Shield className="h-6 w-6 text-primary" />
               Vault Integrity Score
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-6">
+          <CardContent className="space-y-6 p-0 mt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-6 bg-card/10 p-5 rounded-2xl border border-white/5">
               <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
                 <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+                  <defs>
+                    <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="var(--color-primary)" />
+                      <stop offset="100%" stopColor="#8b5cf6" />
+                    </linearGradient>
+                  </defs>
                   <circle
                     cx="50"
                     cy="50"
                     r="40"
                     fill="none"
-                    stroke="var(--color-primary)"
-                    strokeOpacity="0.08"
+                    stroke="currentColor"
+                    className="text-muted/10"
                     strokeWidth="8"
                   />
                   <circle
@@ -416,7 +456,7 @@ export default function DashboardOverview() {
                     cy="50"
                     r="40"
                     fill="none"
-                    stroke="var(--color-primary)"
+                    stroke="url(#scoreGrad)"
                     strokeWidth="8"
                     strokeLinecap="round"
                     strokeDasharray={`${2 * Math.PI * 40}`}
@@ -425,38 +465,38 @@ export default function DashboardOverview() {
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center">
-                  <span className="text-2xl font-black text-foreground leading-none">{vaultHealthPercentage}%</span>
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-extrabold mt-1">Ready</span>
+                  <span className="text-3xl font-black text-foreground leading-none">{vaultHealthPercentage}%</span>
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-black mt-1">Ready</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-2 flex-1 text-center sm:text-left">
-                <h3 className="text-base font-extrabold text-foreground">
+                <h3 className="text-base font-black text-foreground">
                   {vaultHealthPercentage === 100 
                     ? "Vault Fully Configured" 
                     : vaultHealthPercentage >= 75 
                       ? "High Readiness Level" 
                       : "Action Required"}
                 </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-                  Your legacy protocol configuration score is {vaultHealthPercentage}%. Finalize the recommended checks to assure complete legacy transfers.
+                <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                  Your configuration integrity is at {vaultHealthPercentage}%. Satisfy the checklist criteria to guarantee secure digital heritage protocols.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <h4 className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">Setup Checklist</h4>
+            <div className="space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Setup Checklist</h4>
               <div className="grid gap-2">
                 {checklistItems.map((item, idx) => (
                   <Link key={idx} href={item.href}>
-                    <div className="group flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-border/60 hover:border-primary/40 hover:bg-secondary/40 transition-all cursor-pointer">
+                    <div className="group flex items-center justify-between p-3 rounded-xl bg-background/30 border border-white/5 hover:border-primary/40 hover:bg-secondary/40 transition-all cursor-pointer">
                       <div className="flex items-center gap-3">
-                        <CheckCircle2 className={`h-4.5 w-4.5 ${item.status ? "text-emerald-500 fill-emerald-500/10" : "text-muted-foreground/30"}`} />
-                        <span className={`text-xs font-semibold transition-colors ${item.status ? "text-foreground line-through decoration-muted-foreground/30 opacity-70" : "text-foreground group-hover:text-primary"}`}>
+                        <CheckCircle2 className={`h-5 w-5 ${item.status ? "text-emerald-500 fill-emerald-500/10" : "text-muted-foreground/30"}`} />
+                        <span className={`text-xs font-bold transition-colors ${item.status ? "text-foreground line-through decoration-muted-foreground/30 opacity-60" : "text-foreground group-hover:text-primary"}`}>
                           {item.label}
                         </span>
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-primary transition-all group-hover:translate-x-0.5" />
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/55 group-hover:text-primary transition-all group-hover:translate-x-0.5" />
                     </div>
                   </Link>
                 ))}
@@ -465,45 +505,48 @@ export default function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-7 border-border bg-card/40 backdrop-blur-xs shadow-xs transition-all hover:shadow-md hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between">
-          <CardHeader className="pb-4 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              Recent Assets
-            </CardTitle>
-            <Link href="/dashboard/assets">
-              <Button variant="ghost" size="sm" className="gap-1 text-primary hover:text-primary/80 font-bold text-xs p-0 px-2.5">
-                View All
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+        {/* Cell 7: Recent Assets */}
+        <Card className="lg:col-span-7 bg-glass glass-border backdrop-blur-md shadow-lg transition-all hover:shadow-xl hover:border-primary/20 duration-300 rounded-2xl flex flex-col justify-between p-6">
+          <CardHeader className="pb-4 p-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-extrabold flex items-center gap-2.5">
+                <Activity className="h-6 w-6 text-primary" />
+                Recent Assets
+              </CardTitle>
+              <Link href="/dashboard/assets">
+                <Button variant="ghost" size="sm" className="gap-1 text-primary hover:text-primary/80 font-black text-xs hover:bg-secondary/40 px-3 py-1.5 rounded-xl transition-all">
+                  View All Assets
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between gap-4">
+          <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4">
             {assets.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3">
                 {assets.slice(0, 4).map((asset) => {
                   const Icon = typeIcons[asset.type] || FileText
                   const assetNomineeIds = asset.nomineeIds || (asset.nomineeId ? [asset.nomineeId] : [])
                   const assignedNominees = nominees.filter((n) => assetNomineeIds.includes(n.id))
                   const nomineeNames = assignedNominees.map((n) => n.name).join(", ")
-                  const colors = typeColors[asset.type] || "text-muted-foreground bg-muted";
+                  const colors = typeColors[asset.type] || "text-muted-foreground bg-muted"
                   return (
                     <div
                       key={asset.id}
-                      className="group flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/50 p-3 transition-all hover:shadow-xs hover:border-primary/30 hover:bg-secondary/40"
+                      className="group flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-background/30 p-4 transition-all hover:shadow-md hover:border-primary/30 hover:bg-secondary/30 cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl border ${colors}`}>
-                          <Icon className="h-5 w-5" />
+                      <div className="flex items-center gap-4">
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-xl border backdrop-blur-md shadow-sm ${colors}`}>
+                          <Icon className="h-6 w-6" />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-foreground leading-tight">{asset.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                          <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug">{asset.name}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 font-medium leading-none">
                             {asset.type.replace("-", " ")} {nomineeNames ? `• Assigned to ${nomineeNames}` : ""}
                           </p>
                         </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground font-semibold px-2">
+                      <span className="text-[10px] text-muted-foreground font-bold px-2 whitespace-nowrap">
                         {new Date(asset.createdAt).toLocaleDateString(undefined, {
                           month: "short",
                           day: "numeric",
@@ -514,8 +557,11 @@ export default function DashboardOverview() {
                 })}
               </div>
             ) : (
-              <div className="flex h-44 items-center justify-center text-center">
-                <p className="text-xs text-muted-foreground">No secure legacy assets found. Your uploads and secure credentials will show up here.</p>
+              <div className="flex h-52 flex-col items-center justify-center gap-3 text-center">
+                <div className="p-3 rounded-full bg-muted/20 border border-border/40">
+                  <Activity className="h-7 w-7 text-muted-foreground/30" />
+                </div>
+                <p className="text-xs text-muted-foreground font-medium max-w-xs">No secure legacy assets found. Your uploads and secure credentials will show up here.</p>
               </div>
             )}
           </CardContent>
@@ -533,3 +579,4 @@ function Settings(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+

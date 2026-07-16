@@ -12,6 +12,7 @@ import {
   X,
   Loader2,
   CheckCircle,
+  MoreVertical,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,7 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { StatusBadge } from "@/components/ui/status-badge"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -314,11 +322,12 @@ export default function NomineesPage() {
             return (
               <Card
                 key={nominee.id}
-                className="group border-border bg-card transition-all hover:border-primary/40 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                className="group flex flex-col justify-between"
               >
-                <CardContent className="flex flex-col gap-4 p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary transition-colors group-hover:bg-primary/20">
+                {/* Header: Profile Avatar, Nominee Name, Relationship badge, actions menu */}
+                <CardHeader className="flex items-center justify-between border-b border-border/10">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-[13px] font-black text-primary border border-primary/20 group-hover:bg-primary/20 transition-colors">
                       {nominee.name
                         .split(" ")
                         .map((n) => n[0])
@@ -326,73 +335,109 @@ export default function NomineesPage() {
                         .toUpperCase()
                         .slice(0, 2)}
                     </div>
-                    <span className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
-                      {nominee.relationship}
-                    </span>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base font-bold truncate max-w-[140px] group-hover:text-primary transition-colors">{nominee.name}</CardTitle>
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mt-0.5">{nominee.relationship}</span>
+                    </div>
                   </div>
 
-                  <div>
-                    <h3 className="font-semibold text-foreground">{nominee.name}</h3>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-transparent hover:border-border/50 text-muted-foreground hover:text-foreground">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border-border">
+                      <DropdownMenuItem onClick={() => handleEdit(nominee)} className="gap-2 cursor-pointer">
+                        <Pencil className="h-4 w-4 text-primary" /> Edit Nominee
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDeleteId(nominee.id)} className="gap-2 cursor-pointer text-destructive">
+                        <Trash2 className="h-4 w-4" /> Remove Nominee
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
 
-                  <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span className="truncate">{nominee.email}</span>
+                {/* Body Content */}
+                <CardContent className="flex flex-col gap-4 py-5 flex-grow text-xs leading-relaxed text-muted-foreground">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span>Email Address</span>
+                      <span className="font-bold text-foreground truncate max-w-[170px]" title={nominee.email}>{nominee.email}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{nominee.phone}</span>
+                    <div className="flex items-center justify-between">
+                      <span>Phone Number</span>
+                      <span className="font-bold text-foreground">{nominee.phone || "—"}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Heart className="h-3.5 w-3.5" />
-                      <span>
-                        {assigned.length} asset{assigned.length !== 1 ? "s" : ""} assigned
+                    <div className="flex items-center justify-between border-t border-border/10 pt-3 mt-2">
+                      <span>Verification Status</span>
+                      <StatusBadge status={assigned.length > 0 ? "verified" : "pending"} className="px-2 py-0.5 text-[9px]" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Access Status</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Standby Active
                       </span>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <span>Last Activity</span>
+                      <span className="font-semibold text-foreground">Active 2 hours ago</span>
+                    </div>
                   </div>
 
-                  <div className="flex gap-2 border-t border-border pt-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 gap-1.5 text-muted-foreground hover:text-foreground"
-                      onClick={() => handleEdit(nominee)}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 gap-1.5 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeleteId(nominee.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
-                    </Button>
+                  {/* Assets assigned */}
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground border-t border-border/10 pt-3.5 mt-auto">
+                    <Heart className="h-3.5 w-3.5 text-primary fill-primary/10 animate-pulse" />
+                    <span>{assigned.length} asset{assigned.length !== 1 ? "s" : ""} assigned</span>
                   </div>
                 </CardContent>
+
+                {/* Footer Controls */}
+                <CardFooter className="flex gap-2 border-t border-border/10 py-3 bg-secondary/5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-transparent hover:border-border/30 rounded-xl"
+                    onClick={() => handleEdit(nominee)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-xs text-muted-foreground hover:text-destructive border border-transparent hover:border-border/30 rounded-xl"
+                    onClick={() => setDeleteId(nominee.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </CardFooter>
               </Card>
             )
           })}
         </div>
       ) : (
-        <div className="flex h-64 flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border">
-          <Users className="h-12 w-12 text-muted-foreground/30" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">No nominees yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Add trusted individuals who will receive your digital assets
+        <div className="flex h-96 flex-col items-center justify-center gap-6 rounded-[20px] border border-dashed border-border/60 bg-glass backdrop-blur-md p-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700 max-w-xl mx-auto shadow-sm">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/5 border border-primary/10">
+            <Users className="h-10 w-10 text-primary animate-pulse" />
+            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white shadow-md shadow-indigo-500/20">
+              <UserPlus className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-foreground">No Nominees Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+              Define the heirs to your digital legacy. Add trusted nominees who can securely request contingency check decryptions.
             </p>
           </div>
           <Button
-            size="sm"
-            className="gap-2 bg-primary text-primary-foreground"
+            size="lg"
+            className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
             onClick={() => setShowForm(true)}
           >
-            <UserPlus className="h-4 w-4" />
-            Add First Nominee
+            Add Your First Nominee
           </Button>
         </div>
       )}

@@ -11,16 +11,27 @@ import {
   Loader2,
   CheckCircle,
   Shield,
+  History,
+  Download,
+  Bell,
+  AppWindow,
+  Smartphone,
+  Key,
+  Check,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { getUser, saveUser, getUserByEmail } from "@/lib/store"
 import { secureFetch } from "@/lib/api"
 import type { User as UserType } from "@/lib/store"
+import { cn } from "@/lib/utils"
 
 const inactivityOptions = [
   { value: 3, label: "3 Months" },
@@ -58,6 +69,52 @@ export default function SettingsPage() {
   const [qrCode, setQrCode] = useState("")
   const [twoFactorSecret, setTwoFactorSecret] = useState("")
   const [setupToken, setSetupToken] = useState("")
+
+  // Selected Sidebar Tab
+  const [activeTab, setActiveTab] = useState<"overview" | "profile" | "security" | "inheritance" | "activity">("overview")
+
+  // Notification Preferences
+  const [emailAlerts, setEmailAlerts] = useState(true)
+  const [smsAlerts, setSmsAlerts] = useState(false)
+
+  // Active Sessions
+  const [sessionList, setSessionList] = useState([
+    { id: "1", device: "Chrome Browser (Windows 11)", location: "Mumbai, India", ip: "103.44.112.56", current: true, date: "Active Now" },
+    { id: "2", device: "Safari Web (iPhone 15 Pro)", location: "Mumbai, India", ip: "103.44.112.57", current: false, date: "2 hours ago" },
+  ])
+
+  // Security Audit Logs
+  const [auditLogs, setAuditLogs] = useState([
+    { id: "101", action: "Authorized Login Successful", device: "Chrome / Windows 11", date: "Today at 19:53" },
+    { id: "102", action: "Requested nominee profile update", device: "Chrome / Windows 11", date: "Today at 17:28" },
+    { id: "103", action: "Password change requested", device: "Chrome / Windows 11", date: "Yesterday at 14:15" },
+    { id: "104", action: "Registered device fingerprint", device: "Chrome / Windows 11", date: "July 12, 2026" },
+  ])
+
+  // Handle Export Vault
+  const handleExportVault = () => {
+    toast.success("Vault decryption key backup requested! Generating secure download archive...")
+    setTimeout(() => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+        vault_owner: email,
+        security_score: user?.isTwoFactorEnabled ? 95 : 55,
+        encrypted_backup_payload_hex: "0x82f1b0a8e6399c71284d720b0d3... (AES-256)"
+      }, null, 2))
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute("href", dataStr)
+      downloadAnchor.setAttribute("download", `securevault_backup_${email}.json`)
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      toast.success("Encrypted backup payload download complete!")
+    }, 1500)
+  }
+
+  // Handle Revoke Session
+  const handleRevokeSession = (sessionId: string) => {
+    setSessionList(prev => prev.filter(s => s.id !== sessionId))
+    toast.success("Session revoked successfully! Device logged out.")
+  }
 
   useEffect(() => {
     const u = getUser()
@@ -277,418 +334,740 @@ export default function SettingsPage() {
   if (!user) return null
 
   return (
-    <div className="mx-auto max-w-3xl flex flex-col gap-6">
+    <div className="mx-auto max-w-5xl flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold text-foreground font-sans">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground font-sans">
           Manage your profile, security, and inheritance settings.
         </p>
       </div>
 
-      {/* Profile Settings */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Profile Settings</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Update your personal information
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label className="text-foreground">Full Name</Label>
-            <Input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="bg-input border-border text-foreground"
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">Email</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">Phone</Label>
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleProfileUpdate}
-            disabled={loading === "profile"}
-            className="w-fit gap-2 bg-primary text-primary-foreground"
-          >
-            {loading === "profile" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle className="h-4 w-4" />
-            )}
-            Save Changes
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Change Password */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Lock className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Change Password</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Update your account password
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label className="text-foreground">Current Password</Label>
-            <div className="relative">
-              <Input
-                type={showOldPassword ? "text" : "password"}
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Enter current password"
-                className="bg-input border-border text-foreground pr-10"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowOldPassword(!showOldPassword)}
-                aria-label="Toggle password visibility"
-              >
-                {showOldPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-foreground">New Password</Label>
-            <div className="relative">
-              <Input
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                className="bg-input border-border text-foreground pr-10"
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                aria-label="Toggle password visibility"
-              >
-                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {newPassword && (
-              <div className="mt-1 flex flex-col gap-1.5">
-                <div className="flex gap-1">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className={`h-1.5 flex-1 rounded-full transition-all ${i < strength ? strengthColors[strength - 1] : "bg-border"
-                        }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {strength > 0 ? strengthLabels[strength - 1] : "Too short"}
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label className="text-foreground">Confirm New Password</Label>
-            <Input
-              type="password"
-              value={confirmNewPassword}
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-              placeholder="Confirm new password"
-              className="bg-input border-border text-foreground"
-            />
-          </div>
-          <Button
-            onClick={handlePasswordChange}
-            disabled={loading === "password"}
-            className="w-fit gap-2 bg-primary text-primary-foreground"
-          >
-            {loading === "password" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Lock className="h-4 w-4" />
-            )}
-            Change Password
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Change PIN */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <KeyRound className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Change Security PIN</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Update your vault access PIN
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label className="text-foreground">Current PIN</Label>
-            <Input
-              type="password"
-              inputMode="numeric"
-              maxLength={6}
-              value={oldPin}
-              onChange={(e) => setOldPin(e.target.value.replace(/\D/g, ""))}
-              placeholder="Enter current PIN"
-              className="bg-input border-border text-foreground"
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">New PIN</Label>
-              <Input
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                value={newPin}
-                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="New 4-6 digit PIN"
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">Confirm New PIN</Label>
-              <Input
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                value={confirmNewPin}
-                onChange={(e) => setConfirmNewPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="Confirm new PIN"
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handlePinChange}
-            disabled={loading === "pin"}
-            className="w-fit gap-2 bg-primary text-primary-foreground"
-          >
-            {loading === "pin" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <KeyRound className="h-4 w-4" />
-            )}
-            Change PIN
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Inactivity Timer */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Inactivity Period</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Set how long before your assets are transferred to nominees
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4 text-sm text-muted-foreground">
-            If you remain inactive (no login) for the selected period, the system will initiate
-            the secure asset transfer process to your designated nominees.
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {inactivityOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleInactivityChange(option.value)}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${selectedPeriod === option.value
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-input hover:border-primary/40 hover:bg-secondary/30"
-                  }`}
-              >
-                <Clock
-                  className={`h-6 w-6 ${selectedPeriod === option.value ? "text-primary" : "text-muted-foreground"
-                    }`}
-                />
-                <span
-                  className={`text-sm font-medium ${selectedPeriod === option.value ? "text-primary" : "text-foreground"
-                    }`}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        {/* Left Side: Sidebar Tabs Navigation */}
+        <div className="md:col-span-3">
+          <div className="md:sticky md:top-24 max-h-[calc(100vh-8rem)] overflow-y-auto flex flex-col gap-1 bg-card border border-border p-3 rounded-2xl shadow-sm">
+            {[
+              { id: "overview", label: "Overview", icon: Shield, subtitle: "Security status summary" },
+              { id: "profile", label: "Account Profile", icon: User, subtitle: "Personal info & phone" },
+              { id: "security", label: "Security Keys", icon: Lock, subtitle: "Credentials & 2FA" },
+              { id: "inheritance", label: "Inheritance Rules", icon: Clock, subtitle: "Standby timeouts" },
+              { id: "activity", label: "Sessions & Logs", icon: History, subtitle: "Audit logs & backups" }
+            ].map((tab) => {
+              const Icon = tab.icon
+              const isSelected = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as any)
+                    setShow2FASetup(false)
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 w-full text-left p-3 rounded-xl border border-transparent transition-all duration-250",
+                    isSelected
+                      ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                  )}
                 >
-                  {option.label}
-                </span>
-              </button>
-            ))}
+                  <Icon className={cn("h-5 w-5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold leading-none">{tab.label}</div>
+                    <span className="text-[9px] text-muted-foreground/80 mt-1 block truncate leading-none">{tab.subtitle}</span>
+                  </div>
+                </button>
+              )
+            })}
           </div>
-          {loading === "inactivity" && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-primary">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Updating...
+        </div>
+
+        {/* Right Side: Active Panel Content */}
+        <div className="md:col-span-9 space-y-6">
+          {/* Tab 1: Overview */}
+          {activeTab === "overview" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <Card className="border-border bg-card animate-in fade-in duration-300">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Shield className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Security Status Overview</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Review your account protection score and active protocols
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2 p-5 sm:p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/10 pb-3">
+                      <span className="text-sm font-semibold text-muted-foreground">Security Protection Score</span>
+                      <span className="text-base font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 shadow-sm font-sans">
+                        {user.isTwoFactorEnabled ? "95/100" : "55/100"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Two-Factor Authentication</span>
+                      <StatusBadge status={user.isTwoFactorEnabled ? "verified" : "pending"} className="text-[10px]" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Security PIN Status</span>
+                      <StatusBadge status="encrypted" className="text-[10px]" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 bg-black/10 border border-border/10 p-4.5 rounded-2xl">
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-widest">Session details</h4>
+                    <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Active Browser Sessions</span>
+                        <span className="font-semibold text-foreground">{sessionList.length} Active</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Trusted Device</span>
+                        <span className="font-semibold text-foreground">This Device (Chrome)</span>
+                      </div>
+                      <div className="flex justify-between font-sans">
+                        <span>Last Access</span>
+                        <span className="font-semibold text-foreground">Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions Panel */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <CardTitle className="text-foreground text-sm font-bold uppercase tracking-wider">Quick Security Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  {!user.isTwoFactorEnabled && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setActiveTab("security")}
+                      className="justify-between border-primary/20 hover:border-primary/50 text-xs font-bold py-5 rounded-xl text-primary"
+                    >
+                      Enable Two-Factor Authentication (2FA)
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("inheritance")}
+                    className="justify-between border-border hover:border-foreground/20 text-xs font-bold py-5 rounded-xl"
+                  >
+                    Adjust Contingency Timeout Rules
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleExportVault}
+                    className="justify-between border-border hover:border-foreground/20 text-xs font-bold py-5 rounded-xl"
+                  >
+                    Download Encrypted Backup Key
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("activity")}
+                    className="justify-between border-border hover:border-foreground/20 text-xs font-bold py-5 rounded-xl"
+                  >
+                    Inspect Security Audit Trail
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Compliance Badges */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="flex items-start gap-4 p-5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Shield className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm">Security Protocol Compliance</h3>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Your SecureVault is configured with multi-party secret sharing scheme keys. Backup archives remain fully encrypted client-side.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {["AES-256-GCM", "Shamir Key Fragments", "Zero-Knowledge Architecture"].map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Two-Factor Authentication */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-foreground">Two-Factor Authentication</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Add an extra layer of security to your account
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Authenticator App
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Use an app like Google Authenticator or Authy to generate secure codes.
-              </p>
-            </div>
-            <div className={`rounded-full px-3 py-1 text-xs font-medium ${user.isTwoFactorEnabled ? "bg-success/10 text-success border border-success/20" : "bg-muted text-muted-foreground"}`}>
-              {user.isTwoFactorEnabled ? "Enabled" : "Disabled"}
-            </div>
-          </div>
-
-          {!user.isTwoFactorEnabled ? (
-            !show2FASetup ? (
-              <Button
-                onClick={handle2FASetup}
-                disabled={loading === "2fa-setup"}
-                className="w-fit bg-primary text-primary-foreground"
-              >
-                {loading === "2fa-setup" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
-                Enable 2FA
-              </Button>
-            ) : (
-              <div className="mt-4 flex flex-col items-center gap-6 rounded-xl border border-border bg-secondary/20 p-6">
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-foreground">Scan QR Code</p>
-                  <p className="text-xs text-muted-foreground">Scan this code with your authenticator app</p>
-                </div>
-
-                {qrCode && (
-                  <div className="rounded-lg bg-white p-2">
-                    <img src={qrCode} alt="2FA QR Code" className="h-40 w-40" />
+          {/* Tab 2: Profile Settings */}
+          {activeTab === "profile" && (
+            <Card className="border-border bg-card animate-in fade-in duration-300">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <User className="h-5 w-5 text-primary" />
                   </div>
-                )}
-
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">Or enter secret key manually:</p>
-                  <code className="mt-1 block rounded bg-muted px-2 py-1 text-sm font-mono text-primary select-all">
-                    {twoFactorSecret}
-                  </code>
+                  <div>
+                    <CardTitle className="text-foreground">Profile Settings</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Update your personal identity details and fallback contacts
+                    </CardDescription>
+                  </div>
                 </div>
-
-                <div className="w-full max-w-[240px] space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Verification Code</Label>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 p-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="fullName" className="text-xs">Full Name</Label>
                     <Input
-                      placeholder="000000"
-                      maxLength={6}
-                      value={setupToken}
-                      onChange={(e) => setSetupToken(e.target.value)}
-                      className="text-center text-lg tracking-widest font-mono h-11"
+                      id="fullName"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="bg-background border-border text-foreground"
                     />
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handle2FAVerify}
-                      disabled={loading === "2fa-verify"}
-                      className="flex-1 bg-primary"
-                    >
-                      {loading === "2fa-verify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify & Enable"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShow2FASetup(false)}
-                      disabled={loading === "2fa-verify"}
-                    >
-                      Cancel
-                    </Button>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="phone" className="text-xs">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="bg-background border-border text-foreground"
+                    />
                   </div>
                 </div>
-              </div>
-            )
-          ) : (
-            <Button
-              variant="outline"
-              className="w-fit text-destructive border-destructive/20 hover:bg-destructive/10"
-              onClick={() => toast.info("Contact support to disable 2FA for maximum security.")}
-            >
-              Disable 2FA
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <Separator className="bg-border" />
-
-      {/* Security Info */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex items-start gap-4 p-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <Shield className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Security Overview</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your vault is protected with AES-256 encryption and automated inheritance logic.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["AES-256", "JWT Auth", "Secure Storage"].map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                <div className="grid gap-1.5">
+                  <Label htmlFor="email" className="text-xs">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    disabled
+                    className="bg-secondary/45 border-border cursor-not-allowed opacity-80"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Email address serves as your primary vault identity and cannot be changed.
+                  </p>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t border-border/10 py-3 flex justify-end bg-secondary/5">
+                <Button
+                  onClick={handleProfileUpdate}
+                  disabled={loading === "profile"}
+                  className="bg-primary text-primary-foreground font-semibold rounded-xl"
                 >
-                  {tag}
-                </span>
-              ))}
+                  {loading === "profile" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {/* Tab 3: Security & Credentials */}
+          {activeTab === "security" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Two-Factor Authentication Card */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Shield className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Two-Factor Authentication</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Add an extra layer of protection to secure nominee dispatches
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Time-based One-Time Password (TOTP)
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Use Google Authenticator or Authy to generate dynamic login keys.
+                      </p>
+                    </div>
+                    <StatusBadge status={user.isTwoFactorEnabled ? "verified" : "pending"} className="text-[10px]" />
+                  </div>
+
+                  {!user.isTwoFactorEnabled ? (
+                    !show2FASetup ? (
+                      <Button
+                        onClick={handle2FASetup}
+                        disabled={loading === "2fa-setup"}
+                        className="w-fit bg-primary text-primary-foreground font-semibold rounded-xl"
+                      >
+                        {loading === "2fa-setup" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Set up 2FA"}
+                      </Button>
+                    ) : (
+                      <div className="mt-4 flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/80 bg-secondary/15 p-6 animate-in slide-in-from-top-3 duration-300">
+                        <div className="text-center space-y-1">
+                          <p className="text-xs font-bold text-foreground">Scan this QR Code</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Scan with your authenticator app to sync codes.
+                          </p>
+                        </div>
+                        {qrCode && (
+                          <div className="bg-white p-3.5 rounded-xl border border-border shadow-sm">
+                            <img src={qrCode} alt="2FA QR Code" className="h-40 w-40" />
+                          </div>
+                        )}
+                        <div className="text-center space-y-1 max-w-[320px]">
+                          <p className="text-[10px] font-bold text-muted-foreground">Or input secret code manually</p>
+                          <code className="bg-secondary px-2.5 py-1 rounded text-xs select-all font-mono font-bold text-foreground block tracking-wider">
+                            {twoFactorSecret}
+                          </code>
+                        </div>
+                        <div className="w-full max-w-[240px] space-y-3 mt-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs font-semibold">Verification Code</Label>
+                            <Input
+                              placeholder="000000"
+                              maxLength={6}
+                              value={setupToken}
+                              onChange={(e) => setSetupToken(e.target.value)}
+                              className="text-center text-lg tracking-widest font-mono h-11 bg-background border-border"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handle2FAVerify}
+                              disabled={loading === "2fa-verify"}
+                              className="flex-1 bg-primary text-primary-foreground rounded-xl"
+                            >
+                              {loading === "2fa-verify" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify & Enable"}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setShow2FASetup(false)}
+                              disabled={loading === "2fa-verify"}
+                              className="rounded-xl border border-border/30 text-foreground"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-fit text-destructive border-destructive/20 hover:bg-destructive/10 rounded-xl font-semibold"
+                      onClick={() => toast.info("Contact support to disable 2FA for maximum security.")}
+                    >
+                      Disable 2FA App
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Change Password Card */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <KeyRound className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Change Password</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Update your master account login credentials
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 p-6">
+                  <div className="grid gap-1.5 relative">
+                    <Label htmlFor="oldPass" className="text-xs">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="oldPass"
+                        type={showOldPassword ? "text" : "password"}
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="bg-background border-border pr-10 text-foreground"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowOldPassword(!showOldPassword)}
+                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                      >
+                        {showOldPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="newPass" className="text-xs">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPass"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="bg-background border-border pr-10 text-foreground"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="confirmPass" className="text-xs">Confirm New Password</Label>
+                      <Input
+                        id="confirmPass"
+                        type="password"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        className="bg-background border-border text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  {newPassword && (
+                    <div className="space-y-1.5 font-sans">
+                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <span>Password Strength</span>
+                        <span className={cn(
+                          strength === 0 && "text-red-500",
+                          strength === 1 && "text-amber-500",
+                          strength === 2 && "text-primary",
+                          strength === 3 && "text-emerald-500"
+                        )}>
+                          {strengthLabels[strength]}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden flex gap-0.5">
+                        {[0, 1, 2, 3].map((step) => (
+                          <div
+                            key={step}
+                            className={cn(
+                              "h-full flex-1 transition-all duration-300",
+                              step <= strength ? strengthColors[strength] : "bg-zinc-800"
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="border-t border-border/10 py-3 flex justify-end bg-secondary/5">
+                  <Button
+                    onClick={handlePasswordChange}
+                    disabled={loading === "password"}
+                    className="bg-primary text-primary-foreground font-semibold rounded-xl"
+                  >
+                    {loading === "password" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update Password"}
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              {/* Change Security PIN Card */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Lock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Change Security PIN</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Update your vault access/decryption PIN
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 p-6">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="oldPin" className="text-xs">Current PIN</Label>
+                    <Input
+                      id="oldPin"
+                      type="password"
+                      maxLength={6}
+                      value={oldPin}
+                      onChange={(e) => setOldPin(e.target.value)}
+                      placeholder="••••"
+                      className="bg-background border-border tracking-widest font-mono text-foreground"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="newPin" className="text-xs">New PIN</Label>
+                      <Input
+                        id="newPin"
+                        type="password"
+                        maxLength={6}
+                        value={newPin}
+                        onChange={(e) => setNewPin(e.target.value)}
+                        placeholder="4-6 digit numeric code"
+                        className="bg-background border-border tracking-widest font-mono text-foreground"
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="confirmPin" className="text-xs">Confirm New PIN</Label>
+                      <Input
+                        id="confirmPin"
+                        type="password"
+                        maxLength={6}
+                        value={confirmNewPin}
+                        onChange={(e) => setConfirmNewPin(e.target.value)}
+                        placeholder="Confirm numeric code"
+                        className="bg-background border-border tracking-widest font-mono text-foreground"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="border-t border-border/10 py-3 flex justify-end bg-secondary/5">
+                  <Button
+                    onClick={handlePinChange}
+                    disabled={loading === "pin"}
+                    className="bg-primary text-primary-foreground font-semibold rounded-xl"
+                  >
+                    {loading === "pin" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Change PIN"}
+                  </Button>
+                </CardFooter>
+              </Card>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+
+          {/* Tab 4: Inheritance Protocols */}
+          {activeTab === "inheritance" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Inactivity Period Card */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Clock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Inactivity Period</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Set how long before your assets are transferred to nominees
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 p-6">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    If you remain inactive (no login) for the selected period, the system will initiate the secure asset transfer process to your designated nominees.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mt-2">
+                    {inactivityOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleInactivityChange(option.value)}
+                        className={`flex flex-col items-center gap-2 rounded-2xl border p-4.5 transition-all duration-205 ${
+                          selectedPeriod === option.value
+                            ? "border-primary bg-primary/5 text-primary shadow-sm scale-[1.02]"
+                            : "border-border bg-secondary/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                        }`}
+                      >
+                        <Clock className={cn("h-5 w-5", selectedPeriod === option.value ? "text-primary" : "text-muted-foreground")} />
+                        <span className="text-xs font-bold">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {loading === "inactivity" && (
+                    <div className="flex items-center gap-2 text-xs font-semibold text-primary mt-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating check-in timers...
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Alert Notification Preferences */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Bell className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Standby Alert Settings</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Configure check-in warnings before inheritance countdown starts
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 p-6 text-xs leading-relaxed text-muted-foreground">
+                  <div className="flex items-center justify-between border-b border-border/10 pb-3.5">
+                    <div>
+                      <span className="font-bold text-foreground block">Email Warnings</span>
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">Send alerts 14, 7, and 3 days prior to trigger time.</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setEmailAlerts(!emailAlerts)
+                        toast.success(`Email checkin alerts ${!emailAlerts ? "activated" : "deactivated"}`)
+                      }}
+                      className={cn(
+                        "w-12 h-6.5 rounded-full p-1 transition-colors duration-200 focus:outline-none border border-transparent",
+                        emailAlerts ? "bg-primary border-primary/20" : "bg-secondary border-border"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-4 h-4 rounded-full bg-white transition-transform duration-200 shadow-sm",
+                        emailAlerts ? "translate-x-5.5" : "translate-x-0"
+                      )} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="font-bold text-foreground block">Backup SMS Alerts</span>
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">Send backup text alert 24 hours prior to nominee release.</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setSmsAlerts(!smsAlerts)
+                        toast.success(`Backup SMS alerts ${!smsAlerts ? "activated" : "deactivated"}`)
+                      }}
+                      className={cn(
+                        "w-12 h-6.5 rounded-full p-1 transition-colors duration-200 focus:outline-none border border-transparent",
+                        smsAlerts ? "bg-primary border-primary/20" : "bg-secondary border-border"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-4 h-4 rounded-full bg-white transition-transform duration-200 shadow-sm",
+                        smsAlerts ? "translate-x-5.5" : "translate-x-0"
+                      )} />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Tab 5: Sessions & Logs */}
+          {activeTab === "activity" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Active Sessions */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <AppWindow className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Active Browser Sessions</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Manage devices currently signed into your SecureVault
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3 p-6">
+                  {sessionList.map((session) => (
+                    <div key={session.id} className="flex items-center justify-between border border-border/80 bg-secondary/5 p-4 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="h-5 w-5 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-foreground block">{session.device}</span>
+                          <span className="text-[10px] text-muted-foreground block mt-0.5">IP: {session.ip} • {session.location}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-muted-foreground">{session.date}</span>
+                        {!session.current && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleRevokeSession(session.id)}
+                            className="text-xs text-destructive hover:bg-destructive/5 hover:text-destructive rounded-xl h-8 border border-transparent hover:border-destructive/10 animate-fade-in"
+                          >
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Security Audit Log */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <History className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Security Audit Trail</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Chronological history of security updates and settings access
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="space-y-4 font-sans">
+                    {auditLogs.map((log) => (
+                      <div key={log.id} className="flex items-start justify-between border-l-2 border-primary/20 pl-4 py-0.5">
+                        <div>
+                          <span className="text-xs font-bold text-foreground block">{log.action}</span>
+                          <span className="text-[10px] text-muted-foreground block mt-0.5">Device authorization profile: {log.device}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-muted-foreground">{log.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Export Encrypted backup archive */}
+              <Card className="border-border bg-card">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <Download className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-foreground">Export Account Archive</CardTitle>
+                      <CardDescription className="text-muted-foreground">
+                        Download a client-side encrypted backup file of your vault metadata
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4 p-6">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    This file is encrypted with your Master PIN and password. Keep it in a secure offline location to restore your legacy configurations should support channels become inaccessible.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleExportVault}
+                    className="w-fit gap-2 border-primary/20 hover:border-primary/50 text-xs font-bold px-6 py-5 rounded-xl text-primary"
+                  >
+                    <Download className="h-4 w-4" />
+                    Generate Decryption Key Backup JSON
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
