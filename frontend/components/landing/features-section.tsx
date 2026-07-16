@@ -75,16 +75,19 @@ function FeatureCard({
   return (
     <div
       ref={ref}
-      className={`group relative rounded-xl border border-border bg-card p-6 transition-all duration-500 hover:border-primary/40 hover:bg-secondary/50 ${
+      className={`group relative rounded-2xl border border-white/5 bg-glass backdrop-blur-md p-6 transition-all duration-500 hover:border-primary/30 hover:shadow-lg hover:-translate-y-1.5 ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
       }`}
       style={{ transitionDelay: `${index * 100}ms` }}
     >
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-        <Icon className="h-6 w-6 text-primary" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+      <div className="relative z-10">
+        <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary transition-all duration-300 group-hover:bg-primary/20">
+          <Icon className="h-6 w-6" />
+        </div>
+        <h3 className="mb-2 text-lg font-black text-foreground tracking-tight">{feature.title}</h3>
+        <p className="text-xs leading-relaxed text-muted-foreground font-medium">{feature.description}</p>
       </div>
-      <h3 className="mb-2 text-lg font-semibold text-foreground">{feature.title}</h3>
-      <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
     </div>
   )
 }

@@ -96,69 +96,89 @@ export default function PricingPage() {
     }
 
     return (
-        <div className="flex flex-col gap-8 pb-10">
-            <div className="text-center">
-                <h1 className="text-3xl font-extrabold text-foreground tracking-tight sm:text-4xl">Upgrade Your Vault</h1>
-                <p className="mt-2 text-muted-foreground">Secure more legacy with our premium storage plans.</p>
+        <div className="flex flex-col gap-8 pb-12 bg-dot-grid min-h-screen">
+            <div className="text-center space-y-3">
+                <h1 className="text-3xl font-black text-foreground tracking-tight sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground to-primary">
+                    Upgrade Your Vault
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+                    Secure your digital legacy with expanded cloud storage, multi-node replication, and advanced nominees.
+                </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
+            <div className="grid gap-8 md:grid-cols-3 mt-4">
                 {plans.map((plan) => {
                     const Icon = plan.icon
                     const isCurrent = user?.plan === plan.id
 
+                    const holoGradient = 
+                        plan.id === "premium" ? "holo-gradient-premium border-amber-500/20" :
+                        plan.id === "pro" ? "holo-gradient-pro border-blue-500/20" :
+                        "holo-gradient-free border-white/5";
+
+                    const cardShadow =
+                        plan.id === "premium" ? "shadow-lg hover:shadow-amber-500/10" :
+                        plan.id === "pro" ? "shadow-lg hover:shadow-blue-500/10" :
+                        "shadow-md";
+
                     return (
                         <Card
                             key={plan.id}
-                            className={`relative flex flex-col overflow-hidden bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 ${plan.border
-                                } ${plan.glow || ""} ${plan.popular ? "ring-2 ring-blue-500" : ""}`}
+                            className={`relative flex flex-col overflow-hidden bg-glass glass-border backdrop-blur-md transition-all duration-300 hover:-translate-y-2 rounded-3xl p-6 ${holoGradient} ${cardShadow} ${
+                                plan.popular ? "ring-1.5 ring-blue-500/40" : ""
+                            }`}
                         >
                             {plan.popular && (
-                                <div className="absolute right-0 top-0 rounded-bl-lg bg-blue-500 px-3 py-1 text-[10px] font-bold uppercase text-white">
+                                <div className="absolute right-0 top-0 rounded-bl-2xl bg-blue-500 px-4 py-1.5 text-[10px] font-black uppercase text-white tracking-wider shadow-md">
                                     Most Popular
                                 </div>
                             )}
 
-                            <CardHeader className="pt-4 px-5 pb-2">
-                                <div className={`mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-muted group-hover:bg-secondary transition-colors`}>
-                                    <Icon className={`h-5 w-5 ${plan.color}`} />
+                            <CardHeader className="pt-2 p-0 pb-4">
+                                <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-background/60 border border-white/5 backdrop-blur-lg shadow-inner`}>
+                                    <Icon className={`h-6 w-6 ${plan.color}`} />
                                 </div>
-                                <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
-                                <div className="mt-1 flex items-baseline gap-1">
-                                    <span className="text-3xl font-extrabold">{plan.price}</span>
-                                    <span className="text-xs text-muted-foreground">one-time</span>
+                                <CardTitle className="text-2xl font-black tracking-tight text-foreground">{plan.name}</CardTitle>
+                                <div className="mt-2 flex items-baseline gap-1">
+                                    <span className="text-4xl font-black text-foreground tracking-tight">{plan.price}</span>
+                                    <span className="text-xs text-muted-foreground font-semibold">one-time payment</span>
                                 </div>
-                                <p className="mt-2 text-xs font-semibold text-primary">{plan.storage} Storage</p>
+                                <p className="mt-2 text-xs font-extrabold text-primary uppercase tracking-wider">{plan.storage} Storage</p>
                             </CardHeader>
 
-                            <CardContent className="flex-1 px-5 py-2">
-                                <ul className="space-y-2">
+                            <CardContent className="flex-1 p-0 py-4 border-t border-white/5 mt-2">
+                                <ul className="space-y-3.5">
                                     {plan.features.map((feature) => (
-                                        <li key={feature} className="flex gap-2.5 text-xs text-foreground">
-                                            <Check className="h-3.5 w-3.5 shrink-0 text-success" />
-                                            {feature}
+                                        <li key={feature} className="flex items-start gap-3 text-xs text-foreground/80 font-medium">
+                                            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                <Check className="h-3 w-3" />
+                                            </div>
+                                            <span>{feature}</span>
                                         </li>
                                     ))}
                                 </ul>
                             </CardContent>
 
-                            <CardFooter className="px-5 pb-4 pt-0">
+                            <CardFooter className="p-0 pt-6 mt-4">
                                 <Button
-                                    className={`w-full h-10 text-xs font-bold transition-all ${isCurrent
-                                        ? "bg-secondary text-muted-foreground cursor-default"
-                                        : plan.id === "premium"
-                                            ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                            : ""
-                                        }`}
+                                    className={`w-full h-11 text-xs font-bold rounded-xl transition-all duration-200 ${
+                                        isCurrent
+                                            ? "bg-secondary/40 text-muted-foreground border border-white/5 cursor-default hover:bg-secondary/40"
+                                            : plan.id === "premium"
+                                                ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                                                : plan.id === "pro"
+                                                    ? "bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                                                    : "bg-primary hover:bg-primary/90 text-primary-foreground hover:scale-[1.02] active:scale-[0.98]"
+                                    }`}
                                     disabled={isCurrent || (upgrading !== null)}
                                     onClick={() => handleUpgrade(plan.id)}
                                 >
                                     {upgrading === plan.id ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : isCurrent ? (
-                                        "Current Plan"
+                                        "Current Active Plan"
                                     ) : (
-                                        `Upgrade to ${plan.name}`
+                                        `Activate ${plan.name}`
                                     )}
                                 </Button>
                             </CardFooter>
@@ -168,13 +188,15 @@ export default function PricingPage() {
             </div>
 
             {/* Trust Section */}
-            <div className="mt-10 rounded-3xl bg-secondary/30 p-8 text-center border border-border/50 backdrop-blur-sm">
-                <Sparkles className="mx-auto h-8 w-8 text-primary mb-4" />
-                <h3 className="text-xl font-bold mb-2">Lifetime Access</h3>
-                <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-                    All our plans are one-time payments. No monthly subscriptions. Your digital legacy is secured forever.
+            <div className="mt-8 rounded-3xl bg-glass border border-white/5 p-8 text-center backdrop-blur-md max-w-xl mx-auto shadow-lg relative overflow-hidden">
+                <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-primary/10 blur-xl" />
+                <Sparkles className="mx-auto h-9 w-9 text-primary mb-4 animate-pulse" />
+                <h3 className="text-lg font-black mb-1.5 text-foreground">Lifetime Heritage Protection</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto font-medium">
+                    All updates are one-time secure vaults purchases. No recurring monthly overheads. Your digital legacy remains protected indefinitely.
                 </p>
             </div>
         </div>
     )
 }
+

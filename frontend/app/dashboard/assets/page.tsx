@@ -28,7 +28,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { StatusBadge } from "@/components/ui/status-badge"
 import {
   Select,
   SelectContent,
@@ -220,135 +221,162 @@ export default function AssetsPage() {
             return (
               <Card
                 key={asset.id}
-                className="group relative overflow-hidden border-border/50 bg-card/40 transition-all duration-300 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 active:scale-[0.98]"
+                className="group flex flex-col justify-between"
               >
-                {/* Media Preview Area */}
-                <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
-                  {asset.type === "image" && asset.filePaths ? (
-                    <img
-                      src={getAssetUrl(asset.filePaths)}
-                      alt={asset.name}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  ) : asset.type === "video" && asset.filePaths ? (
-                    <div className="relative h-full w-full">
-                      <video
-                        src={getAssetUrl(asset.filePaths)}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
-                        <Video className="h-10 w-10 text-white/80" />
-                      </div>
+                {/* Header: Icon, Title, Category and Dropdown Menu */}
+                <CardHeader className="flex items-center justify-between border-b border-border/10">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary border border-primary/10 group-hover:bg-primary/10 transition-colors">
+                      <Icon className="h-5 w-5" />
                     </div>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/5 text-primary/40 group-hover:bg-primary/10 group-hover:text-primary/60 transition-all">
-                        <Icon className="h-8 w-8" />
-                      </div>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base font-bold truncate max-w-[140px] group-hover:text-primary transition-colors">{asset.name}</CardTitle>
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mt-0.5">{typeLabels[asset.type]}</span>
                     </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="absolute left-3 top-3 flex gap-1.5">
-                    <span className="inline-flex items-center rounded-lg bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md border border-white/10">
-                      {typeLabels[asset.type]}
-                    </span>
                   </div>
 
-                  {/* Quick Action Overlay */}
-                  <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-black/40 text-white hover:bg-black/60 focus:ring-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-card border-border">
-                        <DropdownMenuItem onClick={() => setViewAsset(asset)} className="gap-2 cursor-pointer">
-                          <Eye className="h-4 w-4 text-primary" /> View Details
-                        </DropdownMenuItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-transparent hover:border-border/50 text-muted-foreground hover:text-foreground">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border-border">
+                      <DropdownMenuItem onClick={() => setViewAsset(asset)} className="gap-2 cursor-pointer">
+                        <Eye className="h-4 w-4 text-primary" /> View Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/assets/add?edit=${asset.id}`} className="gap-2 cursor-pointer flex items-center w-full">
+                          <Pencil className="h-4 w-4 text-primary" /> Edit Asset
+                        </Link>
+                      </DropdownMenuItem>
+                      {isFile && (
                         <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/assets/add?edit=${asset.id}`} className="gap-2 cursor-pointer flex items-center w-full">
-                            <Pencil className="h-4 w-4 text-primary" /> Edit Asset
-                          </Link>
+                          <a href={getAssetUrl(asset.filePaths)} download className="gap-2 cursor-pointer flex items-center">
+                            <Download className="h-4 w-4 text-primary" /> Download
+                          </a>
                         </DropdownMenuItem>
-                        {isFile && (
-                          <DropdownMenuItem asChild>
-                            <a href={getAssetUrl(asset.filePaths)} download className="gap-2 cursor-pointer flex items-center">
-                              <Download className="h-4 w-4 text-primary" /> Download
-                            </a>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => setDeleteId(asset.id)} className="gap-2 cursor-pointer text-destructive">
-                          <Trash2 className="h-4 w-4" /> Delete Asset
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+                      )}
+                      <DropdownMenuItem onClick={() => setDeleteId(asset.id)} className="gap-2 cursor-pointer text-destructive">
+                        <Trash2 className="h-4 w-4" /> Delete Asset
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
 
-                <CardContent className="flex flex-col gap-3 p-5">
-                  <div onClick={() => setViewAsset(asset)} className="cursor-pointer">
-                    <h3 className="font-bold text-foreground leading-tight group-hover:text-primary transition-colors">{asset.name}</h3>
-                    <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                      {asset.description || "No description provided"}
-                    </p>
-                  </div>
+                {/* Body Content */}
+                <CardContent className="flex flex-col gap-4 py-5 flex-grow">
+                  <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">
+                    {asset.description || "No description provided."}
+                  </p>
 
-                  {/* Special Content Rendering */}
                   {asset.type === "password" && (
-                    <div className="mt-1 flex items-center justify-between rounded-lg bg-secondary/50 p-2.5 border border-border/50">
-                      <code className="text-xs font-mono text-primary truncate max-w-[120px]">
+                    <div className="flex items-center justify-between rounded-xl bg-black/10 border border-border/40 p-3 mt-1">
+                      <code className="text-xs font-mono text-primary truncate max-w-[140px]">
                         {showPassword[asset.id] ? asset.content : "••••••••••••"}
                       </code>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-primary transition-colors"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
                         onClick={(e) => { e.stopPropagation(); togglePassword(asset.id); }}
                       >
-                        {showPassword[asset.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        {showPassword[asset.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   )}
 
                   {asset.type === "note" && (
-                    <div className="mt-1 line-clamp-2 rounded-lg bg-secondary/30 p-2.5 text-[11px] italic text-muted-foreground border border-border/50">
+                    <div className="line-clamp-2 rounded-xl bg-black/10 border border-border/40 p-3 text-[11px] italic text-muted-foreground leading-relaxed mt-1">
                       &quot;{asset.content}&quot;
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between border-t border-border/50 pt-3 text-[10px] font-medium text-muted-foreground">
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      <span className="truncate">Inheritor(s): <span className="text-foreground" title={nomineeNames}>{nomineeNames}</span></span>
+                  {/* Metadata Indicators */}
+                  <div className="grid grid-cols-2 gap-3.5 border-t border-border/10 pt-4 mt-auto">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">Protection</span>
+                      <StatusBadge status="encrypted" className="px-2 py-0.5" />
                     </div>
-                    <span className="shrink-0">{new Date(asset.createdAt).toLocaleDateString()}</span>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">Last Updated</span>
+                      <span className="text-xs font-bold text-foreground block">{new Date(asset.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Nominees */}
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground border-t border-border/10 pt-3">
+                    <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    <span className="truncate">Nominee(s): <span className="font-bold text-foreground" title={nomineeNames}>{nomineeNames}</span></span>
                   </div>
                 </CardContent>
+
+                {/* Footer Controls */}
+                <CardFooter className="flex justify-end gap-1.5 border-t border-border/10 py-3 bg-secondary/5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    onClick={() => setViewAsset(asset)}
+                    title="View Details"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Link href={`/dashboard/assets/add?edit=${asset.id}`}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
+                      title="Edit Asset"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  {isFile && (
+                    <a href={getAssetUrl(asset.filePaths)} download>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/5"
+                        title="Download File"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+                    onClick={() => setDeleteId(asset.id)}
+                    title="Delete Asset"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
               </Card>
             )
           })}
         </div>
       ) : (
-        <div className="flex h-80 flex-col items-center justify-center gap-5 rounded-3xl border border-dashed border-border/50 bg-card/20 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-5 duration-700">
-          <div className="relative">
-            <FolderKey className="h-16 w-16 text-muted-foreground/20" />
-            <div className="absolute -right-2 -top-2 flex h-8 w-8 animate-bounce items-center justify-center rounded-full bg-primary/10 text-primary">
-              <PlusCircle className="h-5 w-5" />
+        <div className="flex h-96 flex-col items-center justify-center gap-6 rounded-[20px] border border-dashed border-border/60 bg-glass backdrop-blur-md p-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700 max-w-xl mx-auto shadow-sm">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/5 border border-primary/10">
+            <FolderKey className="h-10 w-10 text-primary animate-pulse" />
+            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/20">
+              <ShieldCheck className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-foreground">Secure Vault is Empty</p>
-            <p className="mt-1 text-sm text-muted-foreground max-w-xs mx-auto text-balance">
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-foreground">No Vaults Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
               {search || filterType !== "all"
-                ? "No assets match your search criteria. Try broadening your filter."
-                : "Your digital legacy starts here. Encrypt and store your first asset securely."}
+                ? "We couldn't find any vaults matching your search query or category filters. Try expanding your search options."
+                : "Your digital legacy starts here. Create a secure vault to encrypt and guard your critical credentials, files, and keys."}
             </p>
           </div>
           {!search && filterType === "all" && (
             <Link href="/dashboard/assets/add">
-              <Button size="lg" className="rounded-2xl bg-primary text-primary-foreground font-semibold px-8 shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+              <Button size="lg" className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
                 Add Your First Asset
               </Button>
             </Link>

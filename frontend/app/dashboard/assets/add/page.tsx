@@ -14,6 +14,7 @@ import {
   Video,
   StickyNote,
   X,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,8 +62,21 @@ export default function AddAssetPage() {
   const [content, setContent] = useState("") // For passwords/notes
 
   const [file, setFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null)
+      return
+    }
+    if (file.type.startsWith("image/")) {
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+  }, [file])
 
   useEffect(() => {
     const userId = getCurrentUserId()
@@ -340,16 +354,16 @@ export default function AddAssetPage() {
             {/* File Upload for media-based assets */}
             {["image", "video", "document", "legal-file"].includes(type) && (
               <div className="grid gap-2 animate-in slide-in-from-top-2 duration-300">
-                <Label>File Upload</Label>
+                <Label className="text-sm font-semibold">File Upload</Label>
                 <div
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`relative flex cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-10 transition-all ${dragActive
+                  className={`relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-[20px] border-2 border-dashed p-10 transition-all duration-250 ${dragActive
                     ? "border-primary bg-primary/5 scale-[1.01]"
-                    : "border-border bg-background/30 hover:border-primary/40 hover:bg-background/50"
+                    : "border-border bg-background/20 hover:border-primary/40 hover:bg-background/40"
                     }`}
                 >
                   <input
@@ -365,33 +379,49 @@ export default function AddAssetPage() {
                   />
 
                   {file ? (
-                    <div className="flex w-full flex-col items-center gap-2">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                        <CheckCircle className="h-6 w-6 text-primary" />
+                    <div className="flex w-full flex-col items-center gap-3">
+                      {previewUrl ? (
+                        <div className="relative h-24 w-24 overflow-hidden rounded-xl border border-border shadow-sm">
+                          <img
+                            src={previewUrl}
+                            alt="preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+                          <CheckCircle className="h-6 w-6 text-primary animate-pulse" />
+                        </div>
+                      )}
+                      <div className="text-center min-w-0 max-w-full">
+                        <p className="text-xs font-bold text-foreground truncate max-w-[240px]">{file.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-bold">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
-                      <p className="text-sm font-semibold truncate max-w-[200px]">{file.name}</p>
-                      <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      <button
+                      
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                        className="mt-2 text-xs text-destructive hover:underline"
+                        className="text-xs text-destructive hover:text-destructive/80 hover:bg-destructive/5 rounded-xl gap-1.5 h-8 px-4 border border-transparent hover:border-destructive/10"
                       >
-                        Remove file
-                      </button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Remove File
+                      </Button>
                     </div>
                   ) : (
                     <>
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-primary">
-                        <Upload className="h-8 w-8" />
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary/80 border border-border text-primary group-hover:scale-105 transition-transform duration-300">
+                        <Upload className="h-6 w-6" />
                       </div>
                       <div className="text-center">
-                        <p className="font-medium">Drop your {type} here</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {editId ? "or click to browse to replace current file" : "or click to browse from files"}
+                        <p className="text-sm font-semibold text-foreground">Drop your {type} here</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {editId ? "or click to browse to replace current file" : "or click to browse from local storage"}
                         </p>
                         {editId && (
-                          <p className="text-[10px] text-primary/70 mt-1 font-semibold">
-                            (Current file is already secured)
+                          <p className="text-[10px] text-primary/80 mt-1.5 font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full inline-block">
+                            Current file is secured
                           </p>
                         )}
                       </div>
