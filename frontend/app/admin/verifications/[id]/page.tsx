@@ -87,6 +87,13 @@ export default function VerificationDetailPage() {
   const handleActionConfirm = async (remarks: string) => {
     if (!currentAction) return
     try {
+      if (canClaim) {
+        try {
+          await assignVerification(id)
+        } catch (e) {
+          // Ignores if already claimed
+        }
+      }
       await reviewVerification(id, currentAction, remarks)
       toast.success(`Verification ${currentAction.toLowerCase()} successfully`)
       await loadDetail()
@@ -132,8 +139,9 @@ export default function VerificationDetailPage() {
   const n = data.nominee
   const logs = data.auditLogs
 
-  const canClaim = v.status === "PENDING" || v.status === "MORE_DOCUMENTS_REQUIRED"
-  const canReview = v.status === "UNDER_REVIEW"
+  const isFinalStatus = v.status === "APPROVED" || v.status === "REJECTED"
+  const canClaim = !isFinalStatus && v.status !== "UNDER_REVIEW"
+  const canReview = !isFinalStatus
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
