@@ -28,6 +28,7 @@ class Role(str, Enum):
     AUDITOR = "AUDITOR"
     SUPPORT = "SUPPORT"
     READ_ONLY = "READ_ONLY"
+    SECURITY_ADMIN = "SECURITY_ADMIN"
 
 
 class Permission(str, Enum):
@@ -48,12 +49,19 @@ class Permission(str, Enum):
     # User management
     VIEW_USERS = "VIEW_USERS"
     LOCK_USER = "LOCK_USER"
+    UNLOCK_USER = "UNLOCK_USER"
     DELETE_USER = "DELETE_USER"
 
     # Audit & reports
     VIEW_AUDIT_LOGS = "VIEW_AUDIT_LOGS"
     EXPORT_AUDIT_LOGS = "EXPORT_AUDIT_LOGS"
     VIEW_METRICS = "VIEW_METRICS"
+
+    # Security Dashboard & Management
+    VIEW_LOGIN_HISTORY = "VIEW_LOGIN_HISTORY"
+    VIEW_SESSIONS = "VIEW_SESSIONS"
+    MANAGE_SESSIONS = "MANAGE_SESSIONS"
+    VIEW_SECURITY_ALERTS = "VIEW_SECURITY_ALERTS"
 
     # System
     MANAGE_SETTINGS = "MANAGE_SETTINGS"
@@ -98,6 +106,20 @@ ROLE_PERMISSIONS: dict[Role, Set[Permission]] = {
         Permission.VIEW_AUDIT_LOGS,
         Permission.VIEW_METRICS,
         Permission.VIEW_USERS,
+    },
+
+    Role.SECURITY_ADMIN: {
+        Permission.VIEW_VERIFICATIONS,
+        Permission.VIEW_AUDIT_LOGS,
+        Permission.EXPORT_AUDIT_LOGS,
+        Permission.VIEW_METRICS,
+        Permission.VIEW_USERS,
+        Permission.VIEW_LOGIN_HISTORY,
+        Permission.VIEW_SESSIONS,
+        Permission.MANAGE_SESSIONS,
+        Permission.LOCK_USER,
+        Permission.UNLOCK_USER,
+        Permission.VIEW_SECURITY_ALERTS,
     },
 
     Role.SUPER_ADMIN: set(Permission),  # All permissions
