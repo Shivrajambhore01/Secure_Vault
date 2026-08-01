@@ -15,6 +15,8 @@ from app.api.nominees import router as nominees_router
 from app.api.admin_auth import router as admin_auth_router
 from app.api.admin import router as admin_router
 from app.api.verification import router as verification_router
+from app.api.security_admin import router as security_admin_router
+from app.api.support_admin import router as support_admin_router
 from app.api.verification_submit import router as verification_submit_router
 from app.api.verification_workflow import router as verification_workflow_router
 from app.api.health import router as health_router
@@ -115,6 +117,8 @@ app.include_router(nominees_router, prefix="/api/nominees", tags=["Nominees"])
 app.include_router(admin_auth_router, prefix="/api/admin/auth", tags=["Admin Auth"])
 app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(verification_router, prefix="/api/admin/verification", tags=["Verification Admin"])
+app.include_router(security_admin_router, prefix="/api/admin/security", tags=["Security Admin"])
+app.include_router(support_admin_router, prefix="/api/admin/support", tags=["Support Admin"])
 
 # ------------------------------------------------------------------
 # Nominee Verification Submission (legacy simple submit)

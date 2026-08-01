@@ -35,6 +35,8 @@ import { useTheme } from "next-themes"
 const adminNavItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/verifications", label: "Verifications", icon: FileSearch, role: ["VERIFICATION_ADMIN", "SUPER_ADMIN"] },
+  { href: "/admin/security", label: "Security & Audit", icon: Shield, role: ["SECURITY_ADMIN", "SUPER_ADMIN"] },
+  { href: "/admin/support", label: "Support Desk", icon: UsersRound, role: ["SUPPORT_ADMIN", "SUPER_ADMIN"] },
   { href: "/admin/admins", label: "Admins (RBAC)", icon: Shield, role: "SUPER_ADMIN" },
   { href: "/admin/users", label: "Users Registry", icon: UsersRound, role: "SUPER_ADMIN" },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3, role: "SUPER_ADMIN" },
@@ -191,6 +193,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <h1 className="text-lg font-semibold text-foreground tracking-tight hidden sm:block">
               {pathname === "/admin/dashboard" ? "Admin Console Overview" : 
                pathname === "/admin/admins" ? "Admins & RBAC Control" : 
+               pathname.startsWith("/admin/security") ? "Security & Audit Control" :
+               pathname.startsWith("/admin/support") ? "Customer Support Desk" :
                pathname.startsWith("/admin/verifications") ? "Death Verification Module" :
                pathname === "/admin/users" ? "Platform Users Directory" : 
                pathname === "/admin/analytics" ? "Platform-wide Analytics" : 

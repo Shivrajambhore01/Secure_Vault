@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -168,16 +168,22 @@ export default function VerificationDashboardPage() {
           </div>
 
           <div className="mt-4 pt-4 border-t border-border/50">
-            <Tabs defaultValue="ALL" value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-              <TabsList className="bg-background border border-border h-10 w-full justify-start overflow-x-auto">
-                <TabsTrigger value="ALL" className="data-[state=active]:bg-muted">All Requests</TabsTrigger>
-                <TabsTrigger value="PENDING" className="data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-500">Pending</TabsTrigger>
-                <TabsTrigger value="UNDER_REVIEW" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-500">Under Review</TabsTrigger>
-                <TabsTrigger value="MORE_DOCUMENTS_REQUIRED" className="data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500">Needs Docs</TabsTrigger>
-                <TabsTrigger value="APPROVED" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-500">Approved</TabsTrigger>
-                <TabsTrigger value="REJECTED" className="data-[state=active]:bg-red-500/10 data-[state=active]:text-red-500">Rejected</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-64 bg-background border-border text-sm">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Requests</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                  <SelectItem value="MORE_DOCUMENTS_REQUIRED">Needs Docs</SelectItem>
+                  <SelectItem value="APPROVED">Approved</SelectItem>
+                  <SelectItem value="REJECTED">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         

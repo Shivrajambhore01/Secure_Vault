@@ -286,7 +286,7 @@ export default function VerificationDetailPage() {
                   {v.riskScore !== null ? `${v.riskScore} / 100` : "PENDING"}
                 </span>
               </div>
-              {v.riskScore !== null && (
+              {v.riskScore !== null && v.riskScore !== undefined && (
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
                   {v.riskScore > 60 
                     ? "⚠️ High discrepancy detected. Verify extracted document details match user record name exactly."

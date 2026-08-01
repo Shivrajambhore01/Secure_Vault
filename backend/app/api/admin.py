@@ -327,7 +327,8 @@ async def reset_admin_password(
 
 @router.get("/users")
 async def list_platform_users(
-    current_admin: dict = Depends(require_role("SUPER_ADMIN")),
+    current_admin: dict = Depends(require_role("SUPER_ADMIN", "SECURITY_ADMIN")),
+    search: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
 ):
@@ -343,8 +344,21 @@ async def list_platform_users(
         "twoFactorSecret": 0,
     }
 
-    users = await users_col.find({}, safe_projection).skip(skip).limit(limit).to_list(length=limit)
-    total = await users_col.count_documents({})
+    query = {}
+    if search:
+        s = search.strip()
+        query["$or"] = [
+            {"email": {"$regex": s, "$options": "i"}},
+            {"fullName": {"$regex": s, "$options": "i"}}
+        ]
+        # Check if search is a valid ObjectId
+        try:
+            query["$or"].append({"_id": ObjectId(s)})
+        except Exception:
+            pass
+
+    users = await users_col.find(query, safe_projection).skip(skip).limit(limit).to_list(length=limit)
+    total = await users_col.count_documents(query)
 
     for u in users:
         u["_id"] = str(u["_id"])
