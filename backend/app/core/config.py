@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRY_DAYS: int = 7
 
     # JWT (Admin) — completely separate secret so user tokens cannot access admin routes
-    ADMIN_JWT_SECRET: str = Field(..., description="Admin JWT signing secret - REQUIRED")
+    ADMIN_JWT_SECRET: str = Field(default="admin_jwt_secret_key_change_in_production_98765", description="Admin JWT signing secret")
     ADMIN_JWT_EXPIRY_MINUTES: int = 120  # 2 hours
 
     # Inactivity
