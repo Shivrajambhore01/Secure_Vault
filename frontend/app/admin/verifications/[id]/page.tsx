@@ -35,6 +35,8 @@ import {
 import { VerificationStatusBadge } from "@/components/admin/verification-status-badge"
 import { VerificationDocumentViewer } from "@/components/admin/verification-document-viewer"
 import { VerificationActionDialog } from "@/components/admin/verification-action-dialog"
+import { AIVerificationPanel } from "@/components/admin/ai-verification-panel"
+
 
 export default function VerificationDetailPage() {
   const params = useParams()
@@ -327,6 +329,13 @@ export default function VerificationDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* AI Verification Report Panel */}
+          <AIVerificationPanel
+            verificationId={v.id}
+            aiData={v.aiVerificationFull || data.aiVerification || v.aiVerification}
+            onAnalysisComplete={loadDetail}
+          />
 
           {/* Audit Timeline */}
           <Card className="border-border bg-card">

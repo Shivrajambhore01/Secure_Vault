@@ -349,7 +349,8 @@ async def list_platform_users(
         s = search.strip()
         query["$or"] = [
             {"email": {"$regex": s, "$options": "i"}},
-            {"fullName": {"$regex": s, "$options": "i"}}
+            {"fullName": {"$regex": s, "$options": "i"}},
+            {"id": {"$regex": s, "$options": "i"}},
         ]
         # Check if search is a valid ObjectId
         try:

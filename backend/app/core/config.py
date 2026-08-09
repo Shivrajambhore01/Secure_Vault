@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     VERIFICATION_OTP_MAX_ATTEMPTS: int = 3
     VERIFICATION_OTP_EXPIRY_MINUTES: int = 10
 
+    # AI Verification Engine
+    AI_VERIFICATION_ENABLED: bool = True
+    AI_HIGH_CONFIDENCE_THRESHOLD: int = 90
+    AI_MEDIUM_CONFIDENCE_THRESHOLD: int = 70
+    AI_AUTO_ANALYZE_ON_UPLOAD: bool = True
+
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
 

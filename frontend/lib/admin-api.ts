@@ -1,7 +1,7 @@
 import { setAdminLoggedIn } from "./admin-store"
 import { toast } from "sonner"
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 export const ADMIN_BASE_URL = `${API_BASE}/api/admin`
 
 // Prevent multiple simultaneous token refresh attempts for admin

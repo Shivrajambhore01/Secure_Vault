@@ -403,6 +403,13 @@ async def get_verification_detail(
     for log in audit_logs:
         log["_id"] = str(log["_id"])
 
+    # Fetch stored AI verification report if present
+    ai_ver_doc = await db["ai_verifications"].find_one({"verificationRequestId": verification_id})
+    if ai_ver_doc:
+        ai_ver_doc["_id"] = str(ai_ver_doc["_id"])
+        v["aiVerificationFull"] = ai_ver_doc
+        v["aiVerificationScore"] = ai_ver_doc.get("aiVerificationConfidence")
+
     # Write audit log for viewing
     client_ip = request.client.host if request.client else "unknown"
     await _write_verification_audit(
@@ -417,7 +424,52 @@ async def get_verification_detail(
         "nominee": nominee,
         "reviewer": reviewer,
         "auditLogs": audit_logs,
+        "aiVerification": ai_ver_doc,
     }
+
+
+# ------------------------------------------------------------------
+# POST /requests/{id}/analyze — Trigger AI verification analysis
+# ------------------------------------------------------------------
+
+@router.post("/requests/{verification_id}/analyze")
+async def trigger_ai_analysis(
+    verification_id: str,
+    request: Request,
+    current_admin: dict = Depends(require_role(*ALLOWED_ROLES)),
+):
+    """Trigger AI-assisted death certificate verification analysis."""
+    from app.lib.ai_verification_service import run_ai_verification
+    admin_id = current_admin.get("adminId", "")
+    admin_email = current_admin.get("email", "")
+    client_ip = request.client.host if request.client else "unknown"
+
+    await _write_verification_audit(
+        verification_id, "AI_ANALYSIS_TRIGGERED",
+        admin_id, admin_email, client_ip,
+    )
+
+    ai_result = await run_ai_verification(verification_id, admin_id=admin_id)
+    return {"message": "AI verification analysis completed successfully.", "aiResult": ai_result}
+
+
+# ------------------------------------------------------------------
+# GET /requests/{id}/ai-result — Retrieve stored AI verification result
+# ------------------------------------------------------------------
+
+@router.get("/requests/{verification_id}/ai-result")
+async def get_ai_verification_result(
+    verification_id: str,
+    current_admin: dict = Depends(require_role(*ALLOWED_ROLES)),
+):
+    """Retrieve stored AI verification report for a request."""
+    ai_doc = await db["ai_verifications"].find_one({"verificationRequestId": verification_id})
+    if not ai_doc:
+        return {"status": "pending", "message": "AI analysis pending or not yet requested."}
+
+    ai_doc["_id"] = str(ai_doc["_id"])
+    return {"status": "completed", "aiResult": ai_doc}
+
 
 
 # ------------------------------------------------------------------

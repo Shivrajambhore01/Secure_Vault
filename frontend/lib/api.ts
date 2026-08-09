@@ -1,7 +1,7 @@
 import { setLoggedIn } from "./store"
 import { toast } from "sonner"
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 export const BASE_URL = `${API_BASE}/api`
 
 // Prevent multiple simultaneous token refresh attempts

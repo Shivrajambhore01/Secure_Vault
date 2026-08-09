@@ -786,6 +786,16 @@ async def upload_death_document(
     await _write_log(request_id, "DEATH_DOCUMENT_UPLOADED", ip_address=_get_ip(request),
                      metadata={"documentType": doc_type, "isPreferred": is_preferred})
 
+    # Trigger background AI verification analysis
+    if getattr(settings, "AI_AUTO_ANALYZE_ON_UPLOAD", True):
+        try:
+            import asyncio
+            from app.lib.ai_verification_service import run_ai_verification
+            asyncio.create_task(run_ai_verification(request_id, admin_id="ai_auto_trigger"))
+            print(f"[AI AUTO-VERIFY] Dispatched background AI analysis for request {request_id}")
+        except Exception as e:
+            print(f"[AI AUTO-VERIFY] Background task error: {e}")
+
     return {
         "message": f"{'Preferred' if is_preferred else 'Alternative'} death evidence uploaded successfully.",
         "documentId": doc_id,
