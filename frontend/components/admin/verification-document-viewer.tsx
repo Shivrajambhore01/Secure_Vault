@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { ExternalLink, Maximize2, FileText, Image as ImageIcon, AlertCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ExternalLink, FileText, Image as ImageIcon, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { secureAdminFetch } from "@/lib/admin-api"
 
 interface VerificationDocumentViewerProps {
   url: string | null
@@ -13,15 +14,69 @@ interface VerificationDocumentViewerProps {
 
 export function VerificationDocumentViewer({
   url,
-  mimeType = "application/pdf",
+  mimeType,
   fileName = "Document",
   label,
 }: VerificationDocumentViewerProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [objectUrl, setObjectUrl] = useState<string | null>(null)
+  const [detectedMime, setDetectedMime] = useState<string>(mimeType || "application/pdf")
 
-  const isPdf = mimeType.includes("pdf")
-  const isImage = mimeType.includes("image")
+  useEffect(() => {
+    if (!url) return
+
+    let active = true
+    let createdUrl: string | null = null
+
+    setLoading(true)
+    setError(false)
+
+    secureAdminFetch(url)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const contentType = res.headers.get("content-type") || ""
+        const blob = await res.blob()
+        if (!active) return
+
+        const nameLower = (fileName || "").toLowerCase()
+        let finalMime = mimeType || contentType || blob.type
+
+        if (
+          nameLower.endsWith(".jpeg") ||
+          nameLower.endsWith(".jpg") ||
+          nameLower.endsWith(".png") ||
+          nameLower.endsWith(".webp")
+        ) {
+          finalMime = "image/jpeg"
+        } else if (nameLower.endsWith(".pdf")) {
+          finalMime = "application/pdf"
+        }
+
+        setDetectedMime(finalMime)
+        createdUrl = URL.createObjectURL(blob)
+        setObjectUrl(createdUrl)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("Error fetching document blob:", err)
+        if (active) {
+          setError(true)
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      active = false
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl)
+      }
+    }
+  }, [url, fileName, mimeType])
+
+  const isPdf = detectedMime.includes("pdf")
+  const isImage =
+    detectedMime.includes("image") || (fileName && /\.(jpeg|jpg|png|webp|gif)$/i.test(fileName))
 
   if (!url) {
     return (
@@ -44,12 +99,14 @@ export function VerificationDocumentViewer({
           {fileName}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
-            <a href={url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3.5 h-3.5" />
-              Open In New Tab
-            </a>
-          </Button>
+          {objectUrl && (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" asChild>
+              <a href={objectUrl} target="_blank" rel="noopener noreferrer" download={fileName}>
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open / Download
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -60,45 +117,36 @@ export function VerificationDocumentViewer({
             <p className="text-sm text-muted-foreground animate-pulse">Decrypting and loading document...</p>
           </div>
         )}
-        
+
         {error ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle className="w-8 h-8 text-destructive mb-3" />
             <p className="text-sm font-medium text-destructive">Failed to load document.</p>
-            <p className="text-xs text-muted-foreground mt-1">The file might be corrupted or missing.</p>
+            <p className="text-xs text-muted-foreground mt-1">The file might be corrupted, missing, or unauthorized.</p>
           </div>
-        ) : isPdf ? (
-          <iframe
-            src={url}
-            className="w-full h-full border-none"
-            title={fileName}
-            onLoad={() => setLoading(false)}
-            onError={() => {
-              setLoading(false)
-              setError(true)
-            }}
-          />
-        ) : isImage ? (
+        ) : objectUrl && isImage ? (
           <div className="w-full h-full flex items-center justify-center p-4">
             <img
-              src={url}
+              src={objectUrl}
               alt={fileName}
-              className="max-w-full max-h-full object-contain rounded-lg"
-              onLoad={() => setLoading(false)}
-              onError={() => {
-                setLoading(false)
-                setError(true)
-              }}
+              className="max-w-full max-h-[600px] object-contain rounded-lg shadow-md"
             />
           </div>
-        ) : (
+        ) : objectUrl && isPdf ? (
+          <iframe
+            src={objectUrl}
+            className="w-full h-full border-none min-h-[500px]"
+            title={fileName}
+          />
+        ) : !loading && objectUrl ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <FileText className="w-8 h-8 text-muted-foreground mb-3" />
             <p className="text-sm font-medium text-foreground">Unsupported File Type</p>
-            <p className="text-xs text-muted-foreground mt-1">{mimeType}</p>
+            <p className="text-xs text-muted-foreground mt-1">{detectedMime}</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
 }
+

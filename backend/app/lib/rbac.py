@@ -7,6 +7,8 @@ Principle of Least Privilege.
 Role Hierarchy:
   SUPER_ADMIN         — Full system access, can create/delete admins
   VERIFICATION_ADMIN  — Can review and decide on verification requests
+  SECURITY_ADMIN      — Security monitoring, session management, audit logs
+  SUPPORT_ADMIN       — Customer support: reset credentials, unlock accounts, recover access
   AUDITOR             — Read-only access to audit logs and reports
   SUPPORT             — Can view user profiles but not decrypt assets
   READ_ONLY           — View-only access to non-sensitive data
@@ -28,6 +30,8 @@ class Role(str, Enum):
     AUDITOR = "AUDITOR"
     SUPPORT = "SUPPORT"
     READ_ONLY = "READ_ONLY"
+    SECURITY_ADMIN = "SECURITY_ADMIN"
+    SUPPORT_ADMIN = "SUPPORT_ADMIN"
 
 
 class Permission(str, Enum):
@@ -48,12 +52,24 @@ class Permission(str, Enum):
     # User management
     VIEW_USERS = "VIEW_USERS"
     LOCK_USER = "LOCK_USER"
+    UNLOCK_USER = "UNLOCK_USER"
     DELETE_USER = "DELETE_USER"
 
     # Audit & reports
     VIEW_AUDIT_LOGS = "VIEW_AUDIT_LOGS"
     EXPORT_AUDIT_LOGS = "EXPORT_AUDIT_LOGS"
     VIEW_METRICS = "VIEW_METRICS"
+
+    # Security Dashboard & Management
+    VIEW_LOGIN_HISTORY = "VIEW_LOGIN_HISTORY"
+    VIEW_SESSIONS = "VIEW_SESSIONS"
+    MANAGE_SESSIONS = "MANAGE_SESSIONS"
+    VIEW_SECURITY_ALERTS = "VIEW_SECURITY_ALERTS"
+
+    # Support / Account Recovery
+    RESET_USER_CREDENTIAL = "RESET_USER_CREDENTIAL"
+    DISABLE_USER_2FA = "DISABLE_USER_2FA"
+    RESEND_VERIFICATION = "RESEND_VERIFICATION"
 
     # System
     MANAGE_SETTINGS = "MANAGE_SETTINGS"
@@ -98,6 +114,30 @@ ROLE_PERMISSIONS: dict[Role, Set[Permission]] = {
         Permission.VIEW_AUDIT_LOGS,
         Permission.VIEW_METRICS,
         Permission.VIEW_USERS,
+    },
+
+    Role.SECURITY_ADMIN: {
+        Permission.VIEW_VERIFICATIONS,
+        Permission.VIEW_AUDIT_LOGS,
+        Permission.EXPORT_AUDIT_LOGS,
+        Permission.VIEW_METRICS,
+        Permission.VIEW_USERS,
+        Permission.VIEW_LOGIN_HISTORY,
+        Permission.VIEW_SESSIONS,
+        Permission.MANAGE_SESSIONS,
+        Permission.LOCK_USER,
+        Permission.UNLOCK_USER,
+        Permission.VIEW_SECURITY_ALERTS,
+    },
+
+    Role.SUPPORT_ADMIN: {
+        Permission.VIEW_USERS,
+        Permission.VIEW_METRICS,
+        Permission.LOCK_USER,
+        Permission.UNLOCK_USER,
+        Permission.RESET_USER_CREDENTIAL,
+        Permission.DISABLE_USER_2FA,
+        Permission.RESEND_VERIFICATION,
     },
 
     Role.SUPER_ADMIN: set(Permission),  # All permissions

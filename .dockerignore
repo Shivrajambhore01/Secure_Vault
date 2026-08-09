@@ -1,0 +1,11 @@
+.git
+.gitignore
+.vscode
+.python-version
+CLEAR_SESSION.html
+CURRENT_SECURITY_AND_FLOW_ANALYSIS.md
+PROJECT_ANALYSIS_SUMMARY.md
+PROJECT_OVERVIEW_AND_ARCHITECTURE.md
+README.md
+docs/
+*.log

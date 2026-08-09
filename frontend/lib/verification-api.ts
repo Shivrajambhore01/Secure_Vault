@@ -20,6 +20,10 @@ export interface VerificationRequest {
   certificateFile?: any
   governmentIdFile?: any
   relationshipProofFile?: any
+  riskScore?: number
+  ocrData?: any
+  deathEvidence?: any
+  selfieFile?: any
 }
 
 export interface VerificationDetail {

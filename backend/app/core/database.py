@@ -20,5 +20,4 @@ async def verify_connection():
         await client.admin.command("ping")
         print("Successfully connected to MongoDB Atlas")
     except Exception as e:
-        print(f"Failed to connect to MongoDB Atlas: {e}")
-        raise
+        print(f"⚠️ Warning: Failed to connect to MongoDB: {e}")
