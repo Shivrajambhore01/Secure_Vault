@@ -135,9 +135,9 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
     EXCLUDED_PREFIXES = ("/health", "/uploads", "/docs", "/openapi")
 
     async def dispatch(self, request: Request, call_next):
-        # Skip excluded routes
+        # Skip preflight OPTIONS requests and excluded routes
         path = request.url.path
-        if any(path.startswith(p) for p in self.EXCLUDED_PREFIXES):
+        if request.method == "OPTIONS" or any(path.startswith(p) for p in self.EXCLUDED_PREFIXES):
             return await call_next(request)
 
         ip = get_client_ip(request)

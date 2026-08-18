@@ -48,7 +48,7 @@ docker compose up -d --build
 ```
 
 ### Access Applications & Endpoints:
-- **🌐 Frontend Web App**: [http://localhost:3001](http://localhost:3001)
+- **🌐 Frontend Web App**: [http://localhost:3000](http://localhost:3000)
 - **⚙️ Backend API**: [http://localhost:8000](http://localhost:8000)
 - **📖 Swagger API Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **🏥 System Health Probe**: [http://localhost:8000/health](http://localhost:8000/health)

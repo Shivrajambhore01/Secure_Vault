@@ -46,31 +46,6 @@ app = FastAPI(
 )
 
 # ------------------------------------------------------------------
-# CORS (matches Express config)
-# ------------------------------------------------------------------
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://10.27.46.5:3000",   # Current network IP (from dev server)
-    "http://172.27.90.5:3000",  # Previous network IP (fallback)
-]
-frontend_url_clean = settings.FRONTEND_URL.strip("\"'").rstrip('/')
-if frontend_url_clean not in allowed_origins:
-    allowed_origins.append(frontend_url_clean)
-if settings.FRONTEND_URL not in allowed_origins:
-    allowed_origins.append(settings.FRONTEND_URL)
-print("ALLOWED CORS ORIGINS:", allowed_origins)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Client-Timezone"],
-)
-
-# ------------------------------------------------------------------
 # Security Headers Middleware
 # ------------------------------------------------------------------
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -92,10 +67,37 @@ if settings.ENABLE_SECURITY_HEADERS:
     app.add_middleware(SecurityHeadersMiddleware)
 
 # ------------------------------------------------------------------
-# Rate Limiting Middleware
+# Rate Limiting & Idempotency Middlewares
 # ------------------------------------------------------------------
 app.add_middleware(GlobalRateLimitMiddleware)
 app.add_middleware(IdempotencyMiddleware)
+
+# ------------------------------------------------------------------
+# CORS Middleware (Must be added LAST so it is the outermost middleware)
+# ------------------------------------------------------------------
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://10.27.46.5:3000",
+    "http://172.27.90.5:3000",
+]
+frontend_url_clean = settings.FRONTEND_URL.strip("\"'").rstrip('/')
+if frontend_url_clean not in allowed_origins:
+    allowed_origins.append(frontend_url_clean)
+if settings.FRONTEND_URL not in allowed_origins:
+    allowed_origins.append(settings.FRONTEND_URL)
+print("ALLOWED CORS ORIGINS:", allowed_origins)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):.*|https://.*\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ------------------------------------------------------------------
 # Static files (uploads)
