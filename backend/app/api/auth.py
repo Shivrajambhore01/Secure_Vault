@@ -50,19 +50,24 @@ sessions_col = db["sessions"]
 # Rate Limiting & Session Helpers
 # ------------------------------------------------------------------
 async def check_rate_limit(request: Request, endpoint: str, limit: int, window_seconds: int):
-    client_ip = request.client.host if request.client else "unknown"
-    key = f"ip:{client_ip}:{endpoint}"
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(seconds=window_seconds)
-    
-    # Delete expired attempts
-    await rate_limits_col.delete_many({"key": key, "timestamp": {"$lt": cutoff}})
-    
-    count = await rate_limits_col.count_documents({"key": key})
-    if count >= limit:
-        raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+    try:
+        client_ip = request.client.host if request.client else "unknown"
+        key = f"ip:{client_ip}:{endpoint}"
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(seconds=window_seconds)
         
-    await rate_limits_col.insert_one({"key": key, "timestamp": now})
+        # Delete expired attempts
+        await rate_limits_col.delete_many({"key": key, "timestamp": {"$lt": cutoff}})
+        
+        count = await rate_limits_col.count_documents({"key": key})
+        if count >= limit:
+            raise HTTPException(status_code=429, detail="Too many attempts. Please try again later.")
+            
+        await rate_limits_col.insert_one({"key": key, "timestamp": now})
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[RateLimit Warning] DB operations skipped: {e}")
 
 
 async def _register_session(user_id: str, refresh_token: str, request: Request):
