@@ -8,8 +8,8 @@ import { GoogleAuthProvider } from '@/components/providers/google-auth-provider'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+// Use standard font fallbacks for offline build safety
+const inter = { variable: 'font-sans' }
 
 export const metadata: Metadata = {
   title: 'SecureVault - Digital Asset Inheritance Platform',

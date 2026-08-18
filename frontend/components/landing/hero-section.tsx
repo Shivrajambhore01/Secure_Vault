@@ -100,7 +100,7 @@ export function HeroSection() {
 
   const getStackStyles = (idx: number) => {
     if (exitingCard === idx) {
-      return "z-40 translate-y-[140px] rotate-3 scale-95 opacity-0 pointer-events-none transition-all duration-300 ease-in"
+      return "z-40 scale-95 opacity-0 pointer-events-none transition-all duration-300 ease-in"
     }
 
     let pos = (idx - activeStep + 3) % 3
@@ -114,17 +114,30 @@ export function HeroSection() {
     }
 
     if (pos === 0) {
-      return "z-30 translate-y-0 scale-100 opacity-100 shadow-xl border-primary/30 transition-all duration-300 ease-out"
-    } else if (pos === 1) {
-      return "z-20 -translate-y-4 scale-[0.95] opacity-90 shadow-md border-border pointer-events-none transition-all duration-300 ease-out"
+      return "z-30 scale-100 opacity-100 transition-all duration-300 ease-out"
     } else {
-      return "z-10 -translate-y-8 scale-[0.90] opacity-60 shadow-sm border-border pointer-events-none transition-all duration-300 ease-out"
+      return "z-10 scale-95 opacity-0 pointer-events-none transition-all duration-300 ease-out"
     }
   }
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-28 pb-16 bg-dot-grid">
-      <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-70" />
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover opacity-45 scale-105"
+        >
+          <source src="/hero-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background" />
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+      </div>
+
+      <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-40 pointer-events-none" />
 
       {/* Radial glow */}
       <div className="pointer-events-none absolute inset-0 z-0">
@@ -186,81 +199,78 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Right Side: Clickable Stacked Card Deck */}
-        <div className="lg:col-span-5 flex justify-center items-center relative min-h-[480px] w-full pt-10">
-          {/* Radial visual glow behind the stack */}
-          <div className="absolute inset-0 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Right Side: Frameless Interactive Feature Highlights */}
+        <div className="lg:col-span-5 flex justify-center items-center relative min-h-[440px] w-full pt-6">
+          {/* Radial visual glow */}
+          <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="relative w-full max-w-[360px] h-[380px]">
+          <div className="relative w-full max-w-[360px] h-[360px]">
             
-            {/* Card 1: Vault Inventory */}
+            {/* Feature 1: Vault Inventory */}
             <div 
               onClick={handleCardClick}
-              className={`absolute inset-0 bg-white dark:bg-zinc-900 text-card-foreground flex flex-col justify-between rounded-[24px] border shadow-lg cursor-pointer select-none p-8 text-center ${
+              className={`absolute inset-0 bg-transparent flex flex-col justify-between cursor-pointer select-none p-6 text-center ${
                 getStackStyles(0)
               }`}
             >
-              <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none rounded-[24px]" />
               <div className="relative z-10 flex flex-col items-center flex-grow justify-center">
                 {/* 3D Circular Avatar Icon */}
-                <div className="h-28 w-28 rounded-full bg-gradient-to-tr from-primary/10 to-indigo-500/20 border border-primary/20 flex items-center justify-center shadow-inner mb-6 transition-transform duration-300 hover:scale-105">
-                  <Database className="h-12 w-12 text-primary drop-shadow-[0_4px_12px_rgba(56,189,189,0.3)] animate-pulse" />
+                <div className="h-28 w-28 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shadow-lg shadow-primary/10 mb-6 transition-transform duration-300 hover:scale-105">
+                  <Database className="h-12 w-12 text-primary drop-shadow-[0_4px_12px_rgba(56,189,189,0.5)] animate-pulse" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground">Vault Inventory</h3>
-                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium">
+                <h3 className="text-2xl font-black tracking-tight text-foreground drop-shadow-md">Vault Inventory</h3>
+                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium max-w-xs drop-shadow-sm">
                   Symmetric AES-256 local encryption. Secure zero-knowledge custody for credentials, files, and crypto keys.
                 </p>
               </div>
-              <div className="relative z-10 border-t border-border/10 pt-4 flex items-center justify-between text-xs font-bold text-primary animate-pulse">
-                <span>Click Card to view Nominee Setup</span>
+              <div className="relative z-10 pt-4 flex items-center justify-center gap-2 text-xs font-bold text-primary animate-pulse hover:underline">
+                <span>Next: Nominee Setup</span>
                 <ChevronRight className="h-4 w-4" />
               </div>
             </div>
 
-            {/* Card 2: Nominee Setup */}
+            {/* Feature 2: Nominee Setup */}
             <div 
               onClick={handleCardClick}
-              className={`absolute inset-0 bg-white dark:bg-zinc-900 text-card-foreground flex flex-col justify-between rounded-[24px] border shadow-lg cursor-pointer select-none p-8 text-center ${
+              className={`absolute inset-0 bg-transparent flex flex-col justify-between cursor-pointer select-none p-6 text-center ${
                 getStackStyles(1)
               }`}
             >
-              <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none rounded-[24px]" />
               <div className="relative z-10 flex flex-col items-center flex-grow justify-center">
                 {/* 3D Circular Avatar Icon */}
-                <div className="h-28 w-28 rounded-full bg-gradient-to-tr from-indigo-500/10 to-purple-500/20 border border-indigo-500/20 flex items-center justify-center shadow-inner mb-6 transition-transform duration-300 hover:scale-105">
-                  <Users className="h-12 w-12 text-indigo-400 drop-shadow-[0_4px_12px_rgba(129,140,248,0.3)]" />
+                <div className="h-28 w-28 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shadow-lg shadow-indigo-500/10 mb-6 transition-transform duration-300 hover:scale-105">
+                  <Users className="h-12 w-12 text-indigo-400 drop-shadow-[0_4px_12px_rgba(129,140,248,0.5)]" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground">Nominee Setup</h3>
-                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium">
+                <h3 className="text-2xl font-black tracking-tight text-foreground drop-shadow-md">Nominee Setup</h3>
+                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium max-w-xs drop-shadow-sm">
                   Designate trusted heirs and key fragment holders. Set customized inactivity standby thresholds.
                 </p>
               </div>
-              <div className="relative z-10 border-t border-border/10 pt-4 flex items-center justify-between text-xs font-bold text-indigo-400 animate-pulse">
-                <span>Click Card to view Heritage Dispatch</span>
+              <div className="relative z-10 pt-4 flex items-center justify-center gap-2 text-xs font-bold text-indigo-400 animate-pulse hover:underline">
+                <span>Next: Heritage Dispatch</span>
                 <ChevronRight className="h-4 w-4" />
               </div>
             </div>
 
-            {/* Card 3: Heritage Dispatch */}
+            {/* Feature 3: Heritage Dispatch */}
             <div 
               onClick={handleCardClick}
-              className={`absolute inset-0 bg-white dark:bg-zinc-900 text-card-foreground flex flex-col justify-between rounded-[24px] border shadow-lg cursor-pointer select-none p-8 text-center ${
+              className={`absolute inset-0 bg-transparent flex flex-col justify-between cursor-pointer select-none p-6 text-center ${
                 getStackStyles(2)
               }`}
             >
-              <div className="absolute inset-0 bg-dot-grid opacity-25 pointer-events-none rounded-[24px]" />
               <div className="relative z-10 flex flex-col items-center flex-grow justify-center">
                 {/* 3D Circular Avatar Icon */}
-                <div className="h-28 w-28 rounded-full bg-gradient-to-tr from-amber-500/10 to-red-500/20 border border-amber-500/20 flex items-center justify-center shadow-inner mb-6 transition-transform duration-300 hover:scale-105">
-                  <Terminal className="h-12 w-12 text-amber-500 drop-shadow-[0_4px_12px_rgba(245,158,11,0.3)]" />
+                <div className="h-28 w-28 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10 mb-6 transition-transform duration-300 hover:scale-105">
+                  <Terminal className="h-12 w-12 text-amber-500 drop-shadow-[0_4px_12px_rgba(245,158,11,0.5)]" />
                 </div>
-                <h3 className="text-xl font-bold text-foreground">Heritage Dispatch</h3>
-                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium">
+                <h3 className="text-2xl font-black tracking-tight text-foreground drop-shadow-md">Heritage Dispatch</h3>
+                <p className="text-sm text-muted-foreground mt-3 leading-relaxed font-medium max-w-xs drop-shadow-sm">
                   Automatic multi-party reassembly. Decentralized credentials transfer upon standby monitor breach.
                 </p>
               </div>
-              <div className="relative z-10 border-t border-border/10 pt-4 flex items-center justify-between text-xs font-bold text-amber-500 animate-pulse">
-                <span>Click Card to return to Vault</span>
+              <div className="relative z-10 pt-4 flex items-center justify-center gap-2 text-xs font-bold text-amber-500 animate-pulse hover:underline">
+                <span>Next: Vault Inventory</span>
                 <ChevronRight className="h-4 w-4" />
               </div>
             </div>

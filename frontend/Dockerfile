@@ -18,7 +18,7 @@ COPY . .
 
 # Build time environment variables (defaults for static generation)
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=dummy-client-id.apps.googleusercontent.com
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=126606573446-arsp6epmi5p91e325oef6l4ktm6asn58.apps.googleusercontent.com
 
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \
     NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID \
