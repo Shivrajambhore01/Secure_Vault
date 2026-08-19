@@ -34,6 +34,7 @@ import type { User as UserType } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
 const inactivityOptions = [
+  { value: 0.000045, label: "2 Minutes (Test Mode)" },
   { value: 3, label: "3 Months" },
   { value: 6, label: "6 Months" },
   { value: 12, label: "12 Months" },
@@ -263,7 +264,7 @@ export default function SettingsPage() {
 
       saveUser(data.user)
       setUser(data.user)
-      toast.success(`Inactivity period set to ${period} months`)
+      toast.success(period < 1 ? "Inactivity period set to 2 Minutes (Test Mode)" : `Inactivity period set to ${period} months`)
     } catch (error: any) {
       toast.error(error.message)
     } finally {

@@ -397,7 +397,7 @@ export default function DashboardOverview() {
           <CardContent className="flex-1 flex flex-col justify-between p-0 mt-4 space-y-4">
             <div>
               <p className="text-3xl font-black tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-muted-foreground">
-                {user ? `${user.inactivityPeriod} Months` : "—"}
+                {user ? (user.inactivityPeriod < 1 ? "2 Minutes (Test)" : `${user.inactivityPeriod} Months`) : "—"}
               </p>
               <p className="text-xs text-muted-foreground font-semibold mt-0.5">
                 Maximum Inactivity Window

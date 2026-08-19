@@ -1,15 +1,32 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+*.log
+
+# Environment files
+.env
+.env*.local
+.env.docker
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+.venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
 # v0 runtime files
 __v0_runtime_loader.js
 __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
-
-# Common ignores
-node_modules/
-.next/
-.env*.local
-.DS_Store
-.env
-backend/.env
-node_modules/
-__pycache__/
-*.pyc

@@ -189,6 +189,9 @@ async def process_reengagement_for_user(user_id: str):
         return
 
     test_mode = settings.INACTIVITY_TEST_MODE
+    user_inactivity_period = float(user.get("inactivityPeriod", 6))
+    is_user_test = test_mode or (user_inactivity_period < 1)
+
     now = datetime.now(timezone.utc).timestamp() * 1000  # ms
 
     # Measure elapsed time from logoutTime (not lastActive)
@@ -196,65 +199,112 @@ async def process_reengagement_for_user(user_id: str):
     logout_time = datetime.fromisoformat(logout_time_str.replace("Z", "+00:00")).timestamp() * 1000
     elapsed = now - logout_time
 
-    if test_mode:
+    if is_user_test:
         # TEST WORKFLOW
-        # Notifications at 1, 2, and 3 minutes of inactivity.
-        # Twilio call triggered at 4 minutes of inactivity.
-        # Nominee access triggered at 5 minutes of inactivity.
         messages_sent = user.get("reEngagementMessagesSent", 0)
 
-        # 1. Send reminder emails at 1, 2, and 3 minutes
-        if messages_sent < 3:
-            target_elapsed = (messages_sent + 1) * 1 * 60 * 1000
-            if elapsed >= target_elapsed:
-                print(f"[RE-ENGAGEMENT-V4][TEST] Sending reminder message {messages_sent + 1} to {user['email']} (elapsed: {elapsed / 1000}s)...")
+        if user_inactivity_period < 1:
+            # 2-MINUTE TEST WORKFLOW (When user selects 2 Minutes option)
+            # 1. Send warning emails at 30s and 60s
+            if messages_sent < 2:
+                target_elapsed = (messages_sent + 1) * 30 * 1000
+                if elapsed >= target_elapsed:
+                    print(f"[RE-ENGAGEMENT-V4][2-MIN-TEST] Sending email {messages_sent + 1} to {user['email']} (elapsed: {elapsed / 1000:.1f}s)...")
 
-                frontend_url = settings.FRONTEND_URL
-                html = f"""
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
-                    <div style="text-align: center; margin-bottom: 24px;">
-                        <span style="font-size: 28px; font-weight: bold; color: #3b82f6;">🔒 SecureVault</span>
+                    frontend_url = settings.FRONTEND_URL
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <span style="font-size: 28px; font-weight: bold; color: #3b82f6;">🔒 SecureVault</span>
+                        </div>
+                        <h2 style="color: #0f172a; font-size: 20px; margin-top: 0; text-align: center;">Inactivity Alert (2-Minute Test Mode)</h2>
+                        <p>Dear {user.get('fullName', 'User')},</p>
+                        <p>We noticed you have been logged out due to inactivity. To ensure the continuous security and preservation of your vault assets, please log back into your account.</p>
+                        <p>Your vault inactivity standby limit is set to <strong>2 Minutes (Test Mode)</strong>. If you do not log in within 2 minutes of logout, nominee notification procedures will trigger automatically.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{frontend_url}/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px;">Log In to SecureVault</a>
+                        </div>
                     </div>
-                    <h2 style="color: #0f172a; font-size: 20px; margin-top: 0; text-align: center;">Inactivity Alert</h2>
-                    <p>Dear {user.get('fullName', 'User')},</p>
-                    <p>We noticed you have been logged out due to inactivity. To ensure the continuous security and preservation of your vault assets, please log back into your account.</p>
-                    <p>If you do not log in within the verification window, our automated protocols will begin designated nominee notification procedures.</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{frontend_url}/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);">Log In to SecureVault</a>
+                    """
+
+                    try:
+                        await _send_email(user.get("email", ""), "SecureVault: Inactivity Security Alert (2-Min Test)", html)
+                        print(f"[RE-ENGAGEMENT-V4][2-MIN-TEST] Email sent to {user.get('email')}")
+
+                        await users_col.update_one(
+                            {"_id": ObjectId(user_id)},
+                            {
+                                "$inc": {"reEngagementMessagesSent": 1},
+                                "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
+                            },
+                        )
+                        messages_sent += 1
+                    except Exception as e:
+                        print(f"[RE-ENGAGEMENT-V4][2-MIN-TEST] Failed to send reminder email: {e}")
+
+            # 2. Trigger Nominee Access at 2 minutes (120,000 ms)
+            if elapsed >= 120 * 1000 and not user.get("nomineesNotified"):
+                print(f"[RE-ENGAGEMENT-V4][2-MIN-TEST] 2 Minutes elapsed for {user['email']}. Notifying nominees now...")
+                await notify_nominees_for_user(user_id)
+
+            print(f"[RE-ENGAGEMENT-V4][2-MIN-TEST] Status for {user['email']}: elapsed={elapsed/1000:.1f}s, sent_msgs={messages_sent}, nominees_notified={user.get('nomineesNotified')}")
+
+        else:
+            # 5-MINUTE GENERAL TEST WORKFLOW
+            # Notifications at 1, 2, and 3 minutes of inactivity.
+            # Twilio call triggered at 4 minutes of inactivity.
+            # Nominee access triggered at 5 minutes of inactivity.
+            if messages_sent < 3:
+                target_elapsed = (messages_sent + 1) * 1 * 60 * 1000
+                if elapsed >= target_elapsed:
+                    print(f"[RE-ENGAGEMENT-V4][TEST] Sending reminder message {messages_sent + 1} to {user['email']} (elapsed: {elapsed / 1000}s)...")
+
+                    frontend_url = settings.FRONTEND_URL
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b;">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <span style="font-size: 28px; font-weight: bold; color: #3b82f6;">🔒 SecureVault</span>
+                        </div>
+                        <h2 style="color: #0f172a; font-size: 20px; margin-top: 0; text-align: center;">Inactivity Alert</h2>
+                        <p>Dear {user.get('fullName', 'User')},</p>
+                        <p>We noticed you have been logged out due to inactivity. To ensure the continuous security and preservation of your vault assets, please log back into your account.</p>
+                        <p>If you do not log in within the verification window, our automated protocols will begin designated nominee notification procedures.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{frontend_url}/login" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);">Log In to SecureVault</a>
+                        </div>
+                        <p style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; margin-top: 24px;">
+                            If you did not request this or have questions, please contact support immediately.
+                        </p>
                     </div>
-                    <p style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.5; margin-top: 24px;">
-                        If you did not request this or have questions, please contact support immediately.
-                    </p>
-                </div>
-                """
+                    """
 
-                try:
-                    await _send_email(user.get("email", ""), "SecureVault: Inactivity Security Alert", html)
-                    print(f"[RE-ENGAGEMENT-V4][TEST] Reminder email sent to {user.get('email')}")
+                    try:
+                        await _send_email(user.get("email", ""), "SecureVault: Inactivity Security Alert", html)
+                        print(f"[RE-ENGAGEMENT-V4][TEST] Reminder email sent to {user.get('email')}")
 
-                    await users_col.update_one(
-                        {"_id": ObjectId(user_id)},
-                        {
-                            "$inc": {"reEngagementMessagesSent": 1},
-                            "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
-                        },
-                    )
-                    messages_sent += 1
-                except Exception as e:
-                    print(f"[RE-ENGAGEMENT-V4][TEST] Failed to send reminder: {e}")
+                        await users_col.update_one(
+                            {"_id": ObjectId(user_id)},
+                            {
+                                "$inc": {"reEngagementMessagesSent": 1},
+                                "$set": {"reEngagementLastMessageAt": datetime.now(timezone.utc).isoformat()},
+                            },
+                        )
+                        messages_sent += 1
+                    except Exception as e:
+                        print(f"[RE-ENGAGEMENT-V4][TEST] Failed to send reminder: {e}")
 
-        # 2. Trigger automated phone call at 4 minutes (after 3rd notification sent)
-        if elapsed >= 4 * 60 * 1000 and messages_sent >= 3 and not user.get("reEngagementCallSent"):
-            print(f"[RE-ENGAGEMENT-V4][TEST] Triggering re-engagement call for {user['email']} (elapsed: {elapsed / 1000}s)")
-            await trigger_reengagement_call(user_id)
+            # 2. Trigger automated phone call at 4 minutes (after 3rd notification sent)
+            if elapsed >= 4 * 60 * 1000 and messages_sent >= 3 and not user.get("reEngagementCallSent"):
+                print(f"[RE-ENGAGEMENT-V4][TEST] Triggering re-engagement call for {user['email']} (elapsed: {elapsed / 1000}s)")
+                await trigger_reengagement_call(user_id)
 
-        # 3. Trigger Nominee Access at 5 minutes (after 4 mins call + 1 min verification period)
-        if elapsed >= 5 * 60 * 1000 and user.get("reEngagementCallSent") and not user.get("nomineesNotified"):
-            print(f"[RE-ENGAGEMENT-V4][TEST] Re-engagement cycle COMPLETED for {user['email']}. Notifying nominees...")
-            await notify_nominees_for_user(user_id)
+            # 3. Trigger Nominee Access at 5 minutes (after 4 mins call + 1 min verification period)
+            if elapsed >= 5 * 60 * 1000 and user.get("reEngagementCallSent") and not user.get("nomineesNotified"):
+                print(f"[RE-ENGAGEMENT-V4][TEST] Re-engagement cycle COMPLETED for {user['email']}. Notifying nominees...")
+                await notify_nominees_for_user(user_id)
 
-        # Print debug status for verification
-        print(f"[RE-ENGAGEMENT-V4][TEST] Status for {user['email']}: elapsed={elapsed/1000:.1f}s, sent_msgs={messages_sent}, call_sent={user.get('reEngagementCallSent')}, nominees_notified={user.get('nomineesNotified')}")
+            # Print debug status for verification
+            print(f"[RE-ENGAGEMENT-V4][TEST] Status for {user['email']}: elapsed={elapsed/1000:.1f}s, sent_msgs={messages_sent}, call_sent={user.get('reEngagementCallSent')}, nominees_notified={user.get('nomineesNotified')}")
 
     else:
         # PRODUCTION WORKFLOW
