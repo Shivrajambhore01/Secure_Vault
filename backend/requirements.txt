@@ -54,5 +54,12 @@ aiofiles==24.1.0                 # Async file read/write (local storage backend)
 # ─── Background Jobs ────────────────────────────────────────
 apscheduler==3.11.0              # Async background job scheduler (8 enterprise jobs)
 
-# ─── System Monitoring ──────────────────────────────────────
-psutil==6.1.1                    # CPU, RAM, disk metrics for /health/metrics endpoint
+# ─── AI Death Certificate Verification ──────────────────────
+paddlepaddle==2.6.2              # PaddlePaddle deep learning framework
+paddleocr==2.7.5                 # PaddleOCR text detection & recognition
+pdf2image==1.17.0                # PDF page -> PIL Image conversion
+opencv-python-headless==4.10.0.84 # Image preprocessing
+numpy>=1.26.0                    # Matrix & image array operations
+fuzzywuzzy[speedup]==0.18.0      # Fuzzy string matching for identity validation
+python-Levenshtein==0.26.1       # Fast C Levenshtein distance for name matching
+

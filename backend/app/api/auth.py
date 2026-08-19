@@ -2,7 +2,7 @@
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Union
 
 import pyotp
 import qrcode
@@ -204,7 +204,7 @@ class UpdateProfileRequest(BaseModel):
     fullName: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
-    inactivityPeriod: Optional[int] = None
+    inactivityPeriod: Optional[Union[int, float]] = None
 
 
 class UpdatePasswordRequest(BaseModel):
