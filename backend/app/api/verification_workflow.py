@@ -883,6 +883,7 @@ async def get_verification_status(accessToken: str, request: Request):
         "hasRequest": True,
         "requestId": ver_request["id"],
         "status": ver_request["status"],
+        "remarks": ver_request.get("remarks", ""),
         "coolingPeriodEnd": ver_request.get("coolingPeriodEnd"),
         "checklist": {
             "emailVerified": ver_request.get("emailVerified", False),
@@ -895,6 +896,7 @@ async def get_verification_status(accessToken: str, request: Request):
         "riskScore": ver_request.get("riskScore"),
         "deathEvidence": ver_request.get("deathEvidence") or [],
         "reviewHistory": ver_request.get("reviewHistory") or [],
+        "reviewedAt": ver_request.get("reviewedAt"),
         "submittedAt": ver_request.get("submittedAt"),
         "updatedAt": ver_request.get("updatedAt"),
     }

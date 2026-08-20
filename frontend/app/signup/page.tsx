@@ -181,8 +181,8 @@ export default function SignupPage() {
   }
 
   const handleStep3 = async () => {
-    if (pin.length < 4) {
-      toast.error("PIN must be at least 4 digits")
+    if (pin.length !== 4) {
+      toast.error("PIN must be exactly 4 digits")
       return
     }
     if (pin !== confirmPin) {
@@ -495,11 +495,11 @@ export default function SignupPage() {
               </p>
 
               <div className="flex flex-col gap-2">
-                <Label className="text-foreground">Create PIN (4-6 digits)</Label>
+                <Label className="text-foreground">Create PIN (4 digits)</Label>
                 <Input
                   type="password"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={4}
                   placeholder="Enter PIN"
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/\D/, ""))}
@@ -512,7 +512,7 @@ export default function SignupPage() {
                 <Input
                   type="password"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={4}
                   placeholder="Confirm PIN"
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/\D/, ""))}

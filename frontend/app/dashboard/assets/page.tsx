@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
 import { PinModal } from "@/components/dashboard/pin-modal"
-import { formatBytes, getCurrentUserId } from "@/lib/store"
+import { formatBytes, getCurrentUserId, isPinVerifiedSession, setPinVerifiedSession } from "@/lib/store"
 import { secureFetch, API_BASE } from "@/lib/api"
 import type { DigitalAsset, Nominee } from "@/lib/store"
 
@@ -78,8 +78,8 @@ const typeLabels: Record<string, string> = {
 }
 
 export default function AssetsPage() {
-  const [pinVerified, setPinVerified] = useState(false)
-  const [showPinModal, setShowPinModal] = useState(true)
+  const [pinVerified, setPinVerified] = useState(() => isPinVerifiedSession())
+  const [showPinModal, setShowPinModal] = useState(() => !isPinVerifiedSession())
   const [assets, setAssets] = useState<any[]>([])
   const [nominees, setNominees] = useState<Nominee[]>([])
   const [search, setSearch] = useState("")
@@ -153,6 +153,7 @@ export default function AssetsPage() {
           window.history.back()
         }}
         onSuccess={() => {
+          setPinVerifiedSession()
           setPinVerified(true)
           setShowPinModal(false)
         }}

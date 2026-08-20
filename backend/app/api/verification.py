@@ -127,31 +127,64 @@ async def _send_notification_email(to: str, subject: str, html: str):
         print(f"[DEV MODE] Would send email to {to}: {subject}")
 
 
-async def _notify_nominee(nominee_email: str, nominee_name: str, status: str, remarks: str = ""):
+async def _notify_nominee(nominee_email: str, nominee_name: str, status: str, remarks: str = "", nominee_token: str = ""):
     """Send a notification email to the nominee about their verification status."""
+    from app.core.config import get_settings
+    settings = get_settings()
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+
     status_labels = {
         "APPROVED": "Approved ✅",
         "REJECTED": "Rejected ❌",
         "MORE_DOCUMENTS_REQUIRED": "Additional Documents Required 📄",
     }
     status_label = status_labels.get(status, status)
+    access_url = f"{frontend_url}/nominee/vault/{nominee_token}" if nominee_token else f"{frontend_url}/nominee/verify/{nominee_token}"
+    resubmit_url = f"{frontend_url}/nominee/verify/{nominee_token}"
+
+    action_button_html = ""
+    if status == "APPROVED":
+        action_button_html = f"""
+        <div style="text-align: center; margin: 28px 0;">
+            <a href="{access_url}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Access Your Approved Assets →
+            </a>
+        </div>
+        """
+    elif status == "REJECTED":
+        action_button_html = f"""
+        <div style="text-align: center; margin: 28px 0;">
+            <a href="{resubmit_url}" style="display: inline-block; background-color: #ef4444; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Resubmit Verification Claim →
+            </a>
+        </div>
+        """
+    elif status == "MORE_DOCUMENTS_REQUIRED":
+        action_button_html = f"""
+        <div style="text-align: center; margin: 28px 0;">
+            <a href="{resubmit_url}" style="display: inline-block; background-color: #f59e0b; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                Upload Requested Documents →
+            </a>
+        </div>
+        """
 
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; border-radius: 16px; overflow: hidden; border: 1px solid #3b82f6;">
         <div style="background: linear-gradient(135deg, #2563eb, #3b82f6); padding: 30px 40px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 24px;">🔐 SecureVault</h1>
-            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Death Verification Update</p>
+            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Inheritance Verification Update</p>
         </div>
         <div style="padding: 36px 40px; color: #e2e8f0;">
             <h2 style="color: #3b82f6; font-size: 20px; margin-top: 0;">Verification Status: {status_label}</h2>
             <p>Hello <strong>{nominee_name}</strong>,</p>
-            <p>Your death verification request on SecureVault has been updated.</p>
+            <p>Your inheritance death verification claim on SecureVault has been reviewed by our compliance team.</p>
             <div style="background: #1e293b; border-radius: 10px; padding: 20px; margin: 24px 0;">
-                <p style="margin: 0; font-size: 14px;"><strong>New Status:</strong> {status_label}</p>
-                {f'<p style="margin: 12px 0 0; font-size: 13px; color: #94a3b8;"><strong>Remarks:</strong> {remarks}</p>' if remarks else ''}
+                <p style="margin: 0; font-size: 14px;"><strong>Status:</strong> {status_label}</p>
+                {f'<p style="margin: 12px 0 0; font-size: 13px; color: #f87171;"><strong>Reason / Remarks:</strong> {remarks}</p>' if remarks else ''}
             </div>
-            {"<p>The vault assets assigned to you will now be accessible through your secure link.</p>" if status == "APPROVED" else ""}
-            {"<p>Please re-submit your verification request with the additional documents requested.</p>" if status == "MORE_DOCUMENTS_REQUIRED" else ""}
+            {action_button_html}
+            {"<p style='color: #94a3b8; font-size: 13px;'>Your approved digital assets are now accessible in view-only mode via your secure portal link.</p>" if status == "APPROVED" else ""}
+            {"<p style='color: #94a3b8; font-size: 13px;'>If your claim was rejected or requires corrections, please click the button above to upload a revised certificate or supporting details.</p>" if status in ("REJECTED", "MORE_DOCUMENTS_REQUIRED") else ""}
             <p style="color: #64748b; font-size: 12px; margin-top: 24px;">This is an automated message from SecureVault. Do not reply to this email.</p>
         </div>
     </div>
@@ -171,19 +204,22 @@ async def _notify_owner(owner_email: str, owner_name: str, nominee_name: str, st
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; border-radius: 16px; overflow: hidden; border: 1px solid #ef4444;">
         <div style="background: linear-gradient(135deg, #dc2626, #ef4444); padding: 30px 40px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 24px;">🔐 SecureVault</h1>
-            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Important Account Notification</p>
+            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">Important Security Notification</p>
         </div>
         <div style="padding: 36px 40px; color: #e2e8f0;">
             <h2 style="color: #ef4444; font-size: 20px; margin-top: 0;">Death Verification Approved</h2>
             <p>Dear <strong>{owner_name}</strong>,</p>
-            <p>A death verification request submitted by your nominee <strong>{nominee_name}</strong> has been approved by our verification team.</p>
-            <p>If you believe this is in error, please log in immediately to your SecureVault account to halt the asset transfer process.</p>
-            <p style="color: #64748b; font-size: 12px; margin-top: 24px;">This is an automated message from SecureVault. If you have questions, contact support immediately.</p>
+            <p>A death verification request submitted by your designated nominee <strong>{nominee_name}</strong> has been <strong>approved</strong> following review of the submitted Death Certificate.</p>
+            <p>Access to your assigned digital vault assets has been unlocked for your nominee.</p>
+            <div style="background: #1e293b; border-radius: 10px; padding: 20px; margin: 24px 0; border: 1px solid #334155;">
+                <p style="margin: 0; font-size: 13px; color: #cbd5e1;"><strong>Security Notice:</strong> If you are active and believe this verification was processed in error, please log in to your SecureVault dashboard immediately to revoke nominee access and secure your account.</p>
+            </div>
+            <p style="color: #64748b; font-size: 12px; margin-top: 24px;">This is an automated security alert from SecureVault.</p>
         </div>
     </div>
     """
     try:
-        await _send_notification_email(owner_email, "SecureVault: Death Verification Approved — Action Required", html)
+        await _send_notification_email(owner_email, "🚨 SecureVault: Death Verification Approved for Nominee", html)
     except Exception as e:
         print(f"[VERIFICATION] Failed to send owner notification to {owner_email}: {e}")
 
@@ -705,6 +741,7 @@ async def review_verification(
             nominee.get("name", "Nominee"),
             new_status,
             body.remarks.strip(),
+            nominee_token=nominee.get("accessToken", ""),
         )
 
     # Notify owner on approval

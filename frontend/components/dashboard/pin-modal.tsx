@@ -14,7 +14,7 @@ interface PinModalProps {
 }
 
 export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
-  const [pin, setPin] = useState(["", "", "", "", "", ""])
+  const [pin, setPin] = useState(["", "", "", ""])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
@@ -25,7 +25,7 @@ export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
     setPin(newPin)
     setError(false)
 
-    if (value && index < 5) {
+    if (value && index < 3) {
       const next = document.getElementById(`pin-modal-${index + 1}`)
       next?.focus()
     }
@@ -41,7 +41,7 @@ export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
   const handleVerify = async () => {
     const entered = pin.join("")
     const user = getUser()
-    if (!user || entered.length < 4) {
+    if (!user || entered.length !== 4) {
       setError(true)
       return
     }
@@ -63,7 +63,7 @@ export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
     } catch (error) {
       setLoading(false)
       setError(true)
-      setPin(["", "", "", "", "", ""])
+      setPin(["", "", "", ""])
       // Shake animation via CSS class
       const container = document.getElementById("pin-modal-container")
       container?.classList.add("animate-shake")
@@ -93,7 +93,7 @@ export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
           </div>
           <h2 className="text-xl font-bold text-foreground">PIN Verification</h2>
           <p className="text-center text-sm text-muted-foreground">
-            Enter your security PIN to access your digital assets.
+            Enter your 4-digit security PIN to access your digital assets.
           </p>
 
           <div className="flex gap-2.5">
@@ -107,7 +107,7 @@ export function PinModal({ open, onClose, onSuccess }: PinModalProps) {
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value.replace(/\D/, ""))}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className={`h-12 w-10 rounded-lg border text-center text-lg font-bold outline-none transition-all ${error
+                className={`h-12 w-12 rounded-lg border text-center text-xl font-bold outline-none transition-all ${error
                   ? "border-destructive bg-destructive/10 text-destructive"
                   : "border-border bg-input text-foreground focus:border-primary focus:ring-2 focus:ring-primary/30"
                   }`}
