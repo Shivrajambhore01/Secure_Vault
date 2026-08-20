@@ -32,6 +32,10 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # ------------------------------------------------------------------
 @router.get("/{user_id}")
 async def get_assets(user_id: str, current_user: dict = Depends(get_current_user)):
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if caller_user_id and str(caller_user_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Cannot access another user's assets")
+
     assets = await assets_col.find({"userId": user_id}, {"fileData": 0}).to_list(length=None)
     # Convert ObjectId to string for JSON serialization
     for a in assets:
@@ -51,6 +55,8 @@ async def save_asset(
     description: str = Form(None),
     nomineeId: str = Form(None),
     nomineeIds: Optional[str] = Form(None),
+    allowedNominees: Optional[str] = Form(None),
+    releasePolicy: Optional[str] = Form(None),
     content: str = Form(None),
     id: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
@@ -58,6 +64,10 @@ async def save_asset(
 ):
     if not userId:
         raise HTTPException(status_code=400, detail="UserId is required")
+
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if caller_user_id and str(caller_user_id) != str(userId):
+        raise HTTPException(status_code=403, detail="Forbidden: Cannot modify another user's assets")
 
     # Fetch user plan info
     user = await users_col.find_one({"_id": ObjectId(userId)})
@@ -108,14 +118,24 @@ async def save_asset(
         if new_file_size > file_size_limit:
             raise HTTPException(status_code=403, detail=f"File size exceeds limits for {plan} plan.")
 
-    # Parse nomineeIds list
+    # Parse nomineeIds / allowedNominees list
+    raw_nominee_str = allowedNominees or nomineeIds
     parsed_nominee_ids = []
-    if nomineeIds:
-        parsed_nominee_ids = [nid.strip() for nid in nomineeIds.split(",") if nid.strip()]
+    if raw_nominee_str:
+        parsed_nominee_ids = [nid.strip() for nid in raw_nominee_str.split(",") if nid.strip()]
     elif nomineeId:
         parsed_nominee_ids = [nomineeId.strip()]
 
     first_nominee_id = parsed_nominee_ids[0] if parsed_nominee_ids else None
+
+    # Parse releasePolicy if provided as JSON string
+    parsed_policy = None
+    if releasePolicy:
+        try:
+            import json
+            parsed_policy = json.loads(releasePolicy) if isinstance(releasePolicy, str) else releasePolicy
+        except Exception:
+            parsed_policy = {"category": type}
 
     # Build asset data
     asset_data = {
@@ -124,6 +144,8 @@ async def save_asset(
         "description": description,
         "nomineeId": first_nominee_id,
         "nomineeIds": parsed_nominee_ids,
+        "allowedNominees": parsed_nominee_ids,
+        "releasePolicy": parsed_policy,
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -248,17 +270,22 @@ async def get_asset_file(asset_id: str, request: Request, token: Optional[str] =
                     is_expired = True
 
             if not is_expired:
-                # Check if asset is assigned to this nominee
-                nominee_id = nominee.get("id")
-                asset_nominee_ids = asset.get("nomineeIds") or ([asset.get("nomineeId")] if asset.get("nomineeId") else [])
-                if nominee_id in asset_nominee_ids:
-                    # Enforce that nominee's death verification claim is APPROVED
-                    ver_req = await db["verification_requests"].find_one({
-                        "nomineeId": nominee_id,
-                        "status": "APPROVED"
-                    })
-                    if ver_req:
-                        authorized = True
+                # Check claim workflow state for owner & nominee entitlement
+                claim_workflow = await db["verification_workflows"].find_one({"userId": asset.get("userId")})
+                from app.lib.authorization import is_nominee_authorized_for_asset
+                if await is_nominee_authorized_for_asset(nominee, asset, claim_workflow):
+                    authorized = True
+                else:
+                    # Fallback check for legacy verification_requests
+                    nominee_id = nominee.get("id")
+                    asset_nominee_ids = asset.get("nomineeIds") or ([asset.get("nomineeId")] if asset.get("nomineeId") else [])
+                    if nominee_id in asset_nominee_ids:
+                        ver_req = await db["verification_requests"].find_one({
+                            "nomineeId": nominee_id,
+                            "status": "APPROVED"
+                        })
+                        if ver_req:
+                            authorized = True
 
     if not authorized:
         raise HTTPException(status_code=401, detail="Unauthorized access to this asset")

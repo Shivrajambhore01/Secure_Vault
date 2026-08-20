@@ -229,6 +229,10 @@ async def get_nominee_assets(session_token: str):
 # ------------------------------------------------------------------
 @router.get("/{user_id}")
 async def get_nominees(user_id: str, current_user: dict = Depends(get_current_user)):
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if caller_user_id and str(caller_user_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Cannot access another user's nominees")
+
     nominees = await nominees_col.find({"userId": user_id}).to_list(length=None)
     for n in nominees:
         n["_id"] = str(n["_id"])
@@ -259,6 +263,10 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
     if not user_id:
         raise HTTPException(status_code=400, detail="UserId is required")
 
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if caller_user_id and str(caller_user_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Cannot modify another user's nominees")
+
     access_token = secrets.token_urlsafe(32)
     token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
 
@@ -288,6 +296,10 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
 # ------------------------------------------------------------------
 @router.delete("/{user_id}/{nominee_id}")
 async def delete_nominee(user_id: str, nominee_id: str, current_user: dict = Depends(get_current_user)):
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if caller_user_id and str(caller_user_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="Forbidden: Cannot delete another user's nominee")
+
     # Delete nominee record
     await nominees_col.delete_one({"id": nominee_id, "userId": user_id})
 

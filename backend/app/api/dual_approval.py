@@ -33,10 +33,7 @@ from app.lib.rbac import Permission, assert_permission
 logger = logging.getLogger("securevault.dual_approval")
 router = APIRouter()
 
-requests_col = db["verification_requests"]
-approvals_col = db["verification_approvals"]
-status_history_col = db["verification_status_history"]
-ALLOWED_ROLES = ("VERIFICATION_ADMIN", "SUPER_ADMIN")
+ALLOWED_ROLES = ("SUPER_ADMIN",)
 
 # Risk score threshold requiring dual approval
 DUAL_APPROVAL_THRESHOLD = 51

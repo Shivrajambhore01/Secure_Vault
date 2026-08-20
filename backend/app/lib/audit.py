@@ -111,6 +111,15 @@ async def write_audit_log(
     }
 
     try:
+        # Cryptographic Hash-Chain Computation
+        import hashlib, json
+        latest_log = await audit_col.find_one(sort=[("timestamp", -1)])
+        previous_hash = (latest_log.get("hash") if latest_log else None) or ("0" * 64)
+        log_entry["previousHash"] = previous_hash
+        
+        canonical_payload = json.dumps(log_entry, sort_keys=True).encode("utf-8")
+        log_entry["hash"] = hashlib.sha256(canonical_payload + previous_hash.encode("utf-8")).hexdigest()
+
         await audit_col.insert_one(log_entry)
         logger.info(
             "AUDIT | %s | %s | actor=%s | resource=%s[%s] | ip=%s",

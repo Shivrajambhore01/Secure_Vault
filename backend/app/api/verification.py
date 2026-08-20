@@ -763,3 +763,67 @@ async def review_verification(
 
     print(f"[VERIFICATION] {body.action} on {verification_id} by {admin_email} — remarks: {body.remarks}")
     return {"message": f"Verification request {new_status.lower().replace('_', ' ')}."}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Stateful Emergency Halt & Session Revocation (Phase 6B & 6C)
+# ─────────────────────────────────────────────────────────────────────
+
+class HaltClaimPayload(BaseModel):
+    token: str
+    confirm: bool = True
+
+
+@router.post("/halt-claim", tags=["Emergency Halt"])
+async def stateful_halt_claim(payload: HaltClaimPayload, request: Request):
+    """
+    Stateful Emergency Halt Endpoint (POST).
+    Owner confirms cancellation of death claim.
+    1. Transitions vault state to CLAIM_HALTED -> ACTIVE via State Machine engine.
+    2. Revokes all active nominee session tokens for this vault.
+    3. Writes immutable hash-chain audit log.
+    """
+    if not payload.token or not payload.confirm:
+        raise HTTPException(status_code=400, detail="Confirmation payload and valid token required to halt claim.")
+
+    # Locate workflow or user by halt token
+    workflow = await db["verification_workflows"].find_one({"haltToken": payload.token})
+    if not workflow:
+        workflow = await db["verification_workflows"].find_one({"token": payload.token})
+
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Invalid or expired emergency halt token.")
+
+    user_id = workflow.get("userId")
+    from app.lib.state_machine import transition_vault_state, VaultState
+    
+    # Transition to CLAIM_HALTED and then revert to ACTIVE
+    await transition_vault_state(user_id, VaultState.CLAIM_HALTED.value, actor_id=f"owner_{user_id}", reason="Emergency Halt Confirmed")
+    await transition_vault_state(user_id, VaultState.ACTIVE.value, actor_id=f"owner_{user_id}", reason="Vault Restored to Active")
+
+    # Invalidate token
+    await db["verification_workflows"].update_one({"_id": workflow["_id"]}, {"$set": {"haltToken": None, "haltedAt": datetime.now(timezone.utc).isoformat()}})
+
+    # Revoke all active nominee sessions for this vault owner
+    nominee_ids = [n["id"] async for n in db["nominees"].find({"userId": user_id})]
+    await db["nominee_sessions"].delete_many({"nomineeId": {"$in": nominee_ids}})
+    await db["nominees"].update_many({"userId": user_id}, {"$set": {"accessToken": None, "tokenExpiry": None}})
+
+    # Audit log
+    from app.lib.audit import write_audit_log
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await write_audit_log(
+        user_id,
+        "EMERGENCY_HALT_CONFIRMED",
+        "SUCCESS",
+        client_ip,
+        user_agent,
+        {"userId": user_id, "revokedNomineeSessionsCount": len(nominee_ids)}
+    )
+
+    return {
+        "success": True,
+        "message": "Claim successfully halted. All active nominee sessions have been revoked and vault restored to ACTIVE.",
+        "vaultState": "ACTIVE"
+    }
