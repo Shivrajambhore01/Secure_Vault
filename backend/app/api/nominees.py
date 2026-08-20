@@ -87,14 +87,35 @@ async def verify_nominee_token(token: str):
 
     print(f"[Nominee] Token verified for: {nominee['email']}")
 
-    # Mask email
-    user_part, domain = nominee["email"].split("@")
-    masked = user_part[0] + "*" * (len(user_part) - 2) + user_part[-1] + "@" + domain
+    # Mask nominee email
+    user_part, domain = nominee["email"].split("@") if "@" in nominee["email"] else (nominee["email"], "")
+    masked = user_part[0] + "*" * max(1, len(user_part) - 2) + (user_part[-1] if len(user_part) > 1 else "") + "@" + domain if domain else nominee["email"]
+
+    # Fetch vault owner details
+    owner_name = nominee.get("userName", "Account Owner")
+    owner_email = ""
+    masked_owner_email = ""
+    if nominee.get("userId"):
+        try:
+            users_col = db["users"]
+            owner = await users_col.find_one({"_id": ObjectId(nominee["userId"])})
+            if owner:
+                owner_name = owner.get("fullName", owner_name)
+                owner_email = owner.get("email", "")
+                if owner_email and "@" in owner_email:
+                    o_part, o_dom = owner_email.split("@")
+                    masked_owner_email = o_part[0] + "*" * max(1, len(o_part) - 2) + (o_part[-1] if len(o_part) > 1 else "") + "@" + o_dom
+        except Exception as err:
+            print(f"[Nominee] Could not fetch owner details: {err}")
 
     return {
         "name": nominee["name"],
         "maskedEmail": masked,
         "email": nominee["email"],
+        "relationship": nominee.get("relationship", ""),
+        "ownerName": owner_name,
+        "maskedOwnerEmail": masked_owner_email or owner_email,
+        "ownerEmail": owner_email,
     }
 
 

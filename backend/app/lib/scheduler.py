@@ -19,26 +19,46 @@ nominees_col = db["nominees"]
 # ------------------------------------------------------------------
 # Email helper (duplicated for independence from route layer)
 # ------------------------------------------------------------------
-async def _send_email(to: str, subject: str, html: str, from_name: str = ""):
+async def _send_email(to: str, subject: str, html: str, from_name: str = "SecureVault"):
     if settings.EMAIL_USER and settings.EMAIL_PASS:
         import aiosmtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
 
+        sender_name = from_name or "SecureVault"
+        sender_header = f"{sender_name} <{settings.EMAIL_USER}>"
+
         msg = MIMEMultipart("alternative")
-        msg["From"] = settings.EMAIL_USER
+        msg["From"] = sender_header
         msg["To"] = to
         msg["Subject"] = subject
+        msg["X-Mailer"] = "SecureVault Notification Service"
         msg.attach(MIMEText(html, "html"))
 
-        await aiosmtplib.send(
-            msg,
-            hostname="smtp.gmail.com",
-            port=587,
-            start_tls=True,
-            username=settings.EMAIL_USER,
-            password=settings.EMAIL_PASS,
-        )
+        try:
+            await aiosmtplib.send(
+                msg,
+                hostname="smtp.gmail.com",
+                port=587,
+                start_tls=True,
+                username=settings.EMAIL_USER,
+                password=settings.EMAIL_PASS,
+                timeout=15,
+            )
+            print(f"[EMAIL-DELIVERY] [OK] Successfully delivered email to {to}: {subject}")
+            
+            # Log to notification_logs collection
+            notif_col = db["notification_logs"]
+            await notif_col.insert_one({
+                "channel": "EMAIL",
+                "recipient": to,
+                "subject": subject,
+                "status": "SENT",
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+            })
+        except Exception as err:
+            print(f"[EMAIL-DELIVERY] [ERROR] SMTP Send failed to {to}: {err}")
+            raise err
     else:
         print(f"[DEV MODE] Would send email to {to}: {subject}")
 
@@ -106,7 +126,12 @@ async def notify_nominees_for_user(user_id: str):
             return
 
         print(f"[NOMINEE-NOTIFICATION] User: {user['email']}")
-        nominees = await nominees_col.find({"userId": user_id}).to_list(length=None)
+        user_email = user.get("email", "").strip().lower()
+        
+        # Support both string and ObjectId userId in nominees collection
+        nominees = await nominees_col.find({
+            "$or": [{"userId": user_id}, {"userId": ObjectId(user_id)}]
+        }).to_list(length=None)
         print(f"[NOMINEE-NOTIFICATION] Found {len(nominees)} nominee(s) for user {user['email']}")
 
         if not nominees:
@@ -119,6 +144,11 @@ async def notify_nominees_for_user(user_id: str):
 
         for nominee in nominees:
             try:
+                nominee_email = nominee.get("email", "").strip().lower()
+                if nominee_email == user_email:
+                    print(f"[NOMINEE-NOTIFICATION] Skipping user's own email ({user_email}) listed as nominee.")
+                    continue
+
                 print(f"[NOMINEE-NOTIFICATION] Processing nominee: {nominee['name']} <{nominee['email']}>")
 
                 token = secrets.token_hex(32)
@@ -130,7 +160,10 @@ async def notify_nominees_for_user(user_id: str):
                 )
 
                 access_url = f"{frontend_url}/nominee/verify/{token}"
-                print(f"[NOMINEE-NOTIFICATION] Generated nominee access link: {access_url}")
+                print("\n" + "=" * 75)
+                print(f"[NOMINEE-TRANSFER-LINK] Nominee Access Link for {nominee['email']}:")
+                print(f"👉 {access_url}")
+                print("=" * 75 + "\n")
 
                 html = f"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; border-radius: 16px; overflow: hidden; border: 1px solid #10b981;">
@@ -156,7 +189,7 @@ async def notify_nominees_for_user(user_id: str):
                     html,
                     from_name="SecureVault",
                 )
-                print(f"[NOMINEE-NOTIFICATION] [OK] Email sent to: {nominee['email']}")
+                print(f"[NOMINEE-NOTIFICATION] [OK] Email delivered to nominee: {nominee['email']}")
                 success_count += 1
 
             except Exception as e:

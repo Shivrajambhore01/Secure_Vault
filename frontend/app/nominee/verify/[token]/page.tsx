@@ -5,20 +5,15 @@ import { useParams, useRouter } from "next/navigation"
 import {
     Shield,
     Mail,
-    Phone,
     FileText,
-    Camera,
     Loader2,
     CheckCircle,
-    XCircle,
-    AlertCircle,
     Upload,
     ArrowRight,
-    Lock,
-    Trash2,
-    Clock,
     UserCheck,
-    FileCheck
+    FileCheck,
+    KeyRound,
+    Clock
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,50 +30,48 @@ export default function NomineeVerifyPage() {
     // Global loading and status
     const [loading, setLoading] = useState(true)
     const [verifying, setVerifying] = useState(false)
-    const [nomineeDetails, setNomineeDetails] = useState<{ name: string; maskedEmail: string; email: string } | null>(null)
+    const [nomineeDetails, setNomineeDetails] = useState<{
+        name: string
+        maskedEmail: string
+        email: string
+        relationship?: string
+        ownerName?: string
+        maskedOwnerEmail?: string
+        ownerEmail?: string
+    } | null>(null)
+    
     const [requestStatus, setRequestStatus] = useState<any>(null)
 
-    // Form inputs / step state
-    const [claimForm, setClaimForm] = useState({
-        claimedByName: "",
-        claimedByRelation: "",
-        claimedByEmail: "",
-        claimedByPhone: "",
-        remarks: ""
-    })
-
-    // Stepper / Sub-step inside NOMINEE_NOTIFIED
-    const [activeWizardStep, setActiveWizardStep] = useState(2) // Start from Step 2 (Email OTP)
+    // Flow Step:
+    // Step 1: Owner Details & Notice
+    // Step 2: Nominee Login / Authentication (OTP)
+    // Step 3: Death Certificate & Claim Form
+    // Step 4: Submission Confirmation & Status
+    const [flowStep, setFlowStep] = useState<1 | 2 | 3 | 4>(1)
+    const [isAuthenticated, setIsAuthenticated] = useState(false)
 
     // OTP states
     const [otp, setOtp] = useState("")
     const [otpSent, setOtpSent] = useState(false)
     const [timer, setTimer] = useState(0)
 
-    // Government ID verification
-    const [idType, setIdType] = useState("AADHAAR")
-    const [idFile, setIdFile] = useState<File | null>(null)
-    const [ocrProgress, setOcrProgress] = useState(0)
-    const [ocrResult, setOcrResult] = useState<any>(null)
+    // Death Certificate Submission Form
+    const [claimForm, setClaimForm] = useState({
+        claimedByName: "",
+        claimedByRelation: "",
+        claimedByEmail: "",
+        claimedByPhone: "",
+        dateOfDeath: "",
+        placeOfDeath: "",
+        deathCertificateNumber: "",
+        remarks: ""
+    })
 
-    // Selfie verification
-    const [selfieFile, setSelfieFile] = useState<File | null>(null)
-    const [selfieProgress, setSelfieProgress] = useState(0)
-    const [selfieResult, setSelfieResult] = useState<any>(null)
-
-    // Death evidence uploads
-    const [deathDocType, setDeathDocType] = useState("DEATH_CERTIFICATE")
-    const [uploadedDeathDocs, setUploadedDeathDocs] = useState<any[]>([])
-    const [uploadingDeathDoc, setUploadingDeathDoc] = useState(false)
-    const [activeUploadType, setActiveUploadType] = useState<string | null>(null)
+    const [deathDocFile, setDeathDocFile] = useState<File | null>(null)
+    const [uploadedDocInfo, setUploadedDocInfo] = useState<any>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
-    // Additional doc upload (Step 8: MORE_DOCUMENTS_REQUIRED)
-    const [additionalDocFile, setAdditionalDocFile] = useState<File | null>(null)
-    const [additionalDocType, setAdditionalDocType] = useState("SUPPORTING_EVIDENCE")
-    const [uploadingAdditional, setUploadingAdditional] = useState(false)
-
-    // Countdown Timer logic for OTP
+    // Countdown Timer for OTP
     useEffect(() => {
         if (timer > 0) {
             const interval = setInterval(() => setTimer(t => t - 1), 1000)
@@ -86,1165 +79,587 @@ export default function NomineeVerifyPage() {
         }
     }, [timer])
 
-    // Load initial nominee details and check current status
+    // Load nominee & owner details
     const loadDetailsAndStatus = async () => {
         try {
-            // 1. Fetch masked details
             const nomineeRes = await fetch(`${BASE_URL}/nominees/verify/${token}`)
             if (!nomineeRes.ok) {
-                const err = await nomineeRes.json()
-                toast.error(err.detail || "Invalid access link")
+                const err = await nomineeRes.json().catch(() => ({}))
+                toast.error(err.detail || "Invalid or expired access link")
                 router.push("/")
                 return
             }
             const nomineeData = await nomineeRes.json()
             setNomineeDetails(nomineeData)
+            
             setClaimForm(prev => ({
                 ...prev,
-                claimedByName: nomineeData.name,
-                claimedByEmail: nomineeData.email
+                claimedByName: nomineeData.name || "",
+                claimedByEmail: nomineeData.email || "",
+                claimedByRelation: nomineeData.relationship || ""
             }))
 
-            // 2. Fetch workflow status
+            // Check existing request status if any
             const statusRes = await fetch(`${BASE_URL}/verification/status?accessToken=${token}`)
             if (statusRes.ok) {
                 const statusData = await statusRes.json()
                 setRequestStatus(statusData)
-                if (statusData.deathEvidence) {
-                    setUploadedDeathDocs(statusData.deathEvidence)
-                }
-
-                // Route automatically to active wizard sub-step based on checked list
-                if (statusData.hasRequest && statusData.status === "NOMINEE_NOTIFIED") {
-                    const chk = statusData.checklist
-                    if (!chk.emailVerified) setActiveWizardStep(2)
-                    else if (!chk.mobileVerified) setActiveWizardStep(3)
-                    else if (!chk.govtIdVerified) setActiveWizardStep(4)
-                    else if (!chk.faceVerified) setActiveWizardStep(5)
-                    else if (chk.deathEvidenceCount === 0) setActiveWizardStep(6)
-                    else setActiveWizardStep(7) // Go to final checklist
+                if (statusData.hasRequest && (statusData.status === "PENDING_REVIEW" || statusData.status === "APPROVED" || statusData.status === "MORE_DOCUMENTS_REQUIRED")) {
+                    setFlowStep(4)
                 }
             }
         } catch (error) {
-            toast.error("Failed to load platform settings.")
+            toast.error("Failed to load account details.")
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        loadDetailsAndStatus()
+        if (token) loadDetailsAndStatus()
     }, [token])
 
-    // Step 1: Submit initial claim
-    const handleClaimSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!claimForm.claimedByName || !claimForm.claimedByRelation || !claimForm.claimedByEmail || !claimForm.claimedByPhone) {
-            toast.error("Please fill in all claiming fields.")
-            return
-        }
+    // Send OTP to Nominee Email
+    const handleSendOTP = async () => {
+        if (!nomineeDetails?.email) return
         setVerifying(true)
         try {
-            const res = await fetch(`${BASE_URL}/verification/claim`, {
+            const res = await fetch(`${BASE_URL}/nominees/send-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    accessToken: token,
-                    ...claimForm
-                })
-            })
-            const data = await res.json()
-            if (res.ok) {
-                toast.success("Death claim submitted successfully.")
-                loadDetailsAndStatus()
-            } else {
-                toast.error(data.detail || "Failed to submit claim.")
-            }
-        } catch (e) {
-            toast.error("Network error submitting claim.")
-        } finally {
-            setVerifying(false)
-        }
-    }
-
-    // Step 2 & 3: Send OTP
-    const handleSendOTP = async (type: "email" | "mobile") => {
-        setVerifying(true)
-        try {
-            const res = await fetch(`${BASE_URL}/verification/${type}/send-otp`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ accessToken: token })
+                body: JSON.stringify({ token, email: nomineeDetails.email })
             })
             const data = await res.json()
             if (res.ok) {
                 setOtpSent(true)
                 setTimer(60)
                 setOtp("")
-                toast.success(`Verification code sent to your registered ${type}.`)
+                toast.success(`Authentication code sent to ${nomineeDetails.maskedEmail}`)
             } else {
                 toast.error(data.detail || "Failed to send verification code.")
             }
         } catch (e) {
-            toast.error("Network error sending OTP.")
+            toast.error("Network error sending authentication code.")
         } finally {
             setVerifying(false)
         }
     }
 
-    // Step 2 & 3: Verify OTP
-    const handleVerifyOTP = async (e: React.FormEvent, type: "email" | "mobile") => {
+    // Verify Nominee OTP
+    const handleVerifyOTP = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!otp) return
+        if (!otp || !nomineeDetails?.email) return
         setVerifying(true)
         try {
-            const res = await fetch(`${BASE_URL}/verification/${type}/verify`, {
+            const res = await fetch(`${BASE_URL}/nominees/verify-otp`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ accessToken: token, otp })
+                body: JSON.stringify({ email: nomineeDetails.email, otp, token })
             })
             const data = await res.json()
             if (res.ok) {
-                toast.success(`${type === "email" ? "Email" : "Mobile"} verified successfully.`)
-                setOtpSent(false)
-                setOtp("")
-                loadDetailsAndStatus()
+                toast.success("Nominee authenticated successfully!")
+                setIsAuthenticated(true)
+                setFlowStep(3)
             } else {
-                toast.error(data.detail || "Invalid code. Please try again.")
+                toast.error(data.detail || "Invalid code. Please check your email.")
             }
         } catch (e) {
-            toast.error("Verification failed.")
+            toast.error("Authentication failed.")
         } finally {
             setVerifying(false)
         }
     }
 
-    // Step 4: Government ID Upload
-    const handleIdUpload = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!idFile) return
-        setVerifying(true)
-
-        // Simulated OCR progress bar animation
-        setOcrProgress(10)
-        const progressInterval = setInterval(() => {
-            setOcrProgress(p => {
-                if (p >= 90) {
-                    clearInterval(progressInterval)
-                    return 90
-                }
-                return p + 20
-            })
-        }, 300)
-
-        try {
-            const formData = new FormData()
-            formData.append("accessToken", token)
-            formData.append("documentType", idType)
-            formData.append("file", idFile)
-
-            const res = await fetch(`${BASE_URL}/verification/upload-id`, {
-                method: "POST",
-                body: formData
-            })
-            const data = await res.json()
-            clearInterval(progressInterval)
-            setOcrProgress(100)
-
-            if (res.ok) {
-                setOcrResult(data.ocrData)
-                toast.success("ID verified successfully via OCR.")
-                setTimeout(() => {
-                    setIdFile(null)
-                    setOcrProgress(0)
-                    setOcrResult(null)
-                    loadDetailsAndStatus()
-                }, 2000)
-            } else {
-                toast.error(data.detail || "OCR extraction failed.")
-                setOcrProgress(0)
-            }
-        } catch (e) {
-            clearInterval(progressInterval)
-            setOcrProgress(0)
-            toast.error("ID upload failed.")
-        } finally {
-            setVerifying(false)
-        }
-    }
-
-    // Step 5: Selfie Upload
-    const handleSelfieUpload = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!selfieFile) return
-        setVerifying(true)
-
-        setSelfieProgress(20)
-        const progressInterval = setInterval(() => {
-            setSelfieProgress(p => {
-                if (p >= 90) {
-                    clearInterval(progressInterval)
-                    return 90
-                }
-                return p + 20
-            })
-        }, 200)
-
-        try {
-            const formData = new FormData()
-            formData.append("accessToken", token)
-            formData.append("file", selfieFile)
-
-            const res = await fetch(`${BASE_URL}/verification/upload-selfie`, {
-                method: "POST",
-                body: formData
-            })
-            const data = await res.json()
-            clearInterval(progressInterval)
-            setSelfieProgress(100)
-
-            if (res.ok) {
-                setSelfieResult(data.faceResult)
-                toast.success("Selfie verified successfully.")
-                setTimeout(() => {
-                    setSelfieFile(null)
-                    setSelfieProgress(0)
-                    setSelfieResult(null)
-                    loadDetailsAndStatus()
-                }, 2000)
-            } else {
-                toast.error(data.detail || "Selfie matching failed.")
-                setSelfieProgress(0)
-            }
-        } catch (e) {
-            clearInterval(progressInterval)
-            setSelfieProgress(0)
-            toast.error("Selfie upload failed.")
-        } finally {
-            setVerifying(false)
-        }
-    }
-
-    // Step 6: Trigger programmatically
-    const triggerUpload = (type: string) => {
-        setActiveUploadType(type)
-        if (fileInputRef.current) {
-            fileInputRef.current.click()
-        }
-    }
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // File selection handler
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (!file || !activeUploadType) return
-        setUploadingDeathDoc(true)
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                toast.error("File size exceeds 10MB limit.")
+                return
+            }
+            setDeathDocFile(file)
+            toast.success(`Selected file: ${file.name}`)
+        }
+    }
 
+    // Submit Complete Form with Death Certificate
+    const handleSubmitDeathCertificateForm = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!claimForm.claimedByName || !claimForm.claimedByRelation || !claimForm.claimedByPhone) {
+            toast.error("Please complete all required fields.")
+            return
+        }
+        if (!deathDocFile) {
+            toast.error("Please upload the official Death Certificate.")
+            return
+        }
+
+        setVerifying(true)
         try {
+            // Step A: Initiate Claim Request
+            const claimRes = await fetch(`${BASE_URL}/verification/claim`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    accessToken: token,
+                    claimedByName: claimForm.claimedByName,
+                    claimedByRelation: claimForm.claimedByRelation,
+                    claimedByEmail: claimForm.claimedByEmail,
+                    claimedByPhone: claimForm.claimedByPhone,
+                    remarks: `Date of Death: ${claimForm.dateOfDeath} | Place: ${claimForm.placeOfDeath} | Reg #: ${claimForm.deathCertificateNumber} | Notes: ${claimForm.remarks}`
+                })
+            })
+
+            if (!claimRes.ok) {
+                const claimErr = await claimRes.json().catch(() => ({}))
+                // If claim already exists, proceed to upload document
+                if (!claimErr.detail?.includes("already exists")) {
+                    toast.error(claimErr.detail || "Failed to initiate claim request.")
+                    setVerifying(false)
+                    return
+                }
+            }
+
+            // Step B: Upload Death Certificate File
             const formData = new FormData()
             formData.append("accessToken", token)
-            formData.append("documentType", activeUploadType)
-            formData.append("file", file)
+            formData.append("documentType", "DEATH_CERTIFICATE")
+            formData.append("file", deathDocFile)
 
-            const res = await fetch(`${BASE_URL}/verification/upload-death-document`, {
+            const uploadRes = await fetch(`${BASE_URL}/verification/upload-death-document`, {
                 method: "POST",
                 body: formData
             })
-            const data = await res.json()
-            if (res.ok) {
-                toast.success(`${activeUploadType.replace(/_/g, " ")} uploaded successfully.`)
-                setUploadedDeathDocs(prev => [...prev, {
-                    documentId: data.documentId,
-                    documentType: data.documentType,
-                    fileName: file.name,
-                    isPreferred: data.isPreferred
-                }])
-            } else {
-                toast.error(data.detail || "Upload failed.")
-            }
-        } catch (e) {
-            toast.error("Upload failed.")
-        } finally {
-            setUploadingDeathDoc(false)
-            e.target.value = "" // Reset
-        }
-    }
 
-    const handleRemoveDoc = async (documentId: string) => {
-        setUploadingDeathDoc(true)
-        try {
-            const res = await fetch(`${BASE_URL}/verification/document/${documentId}?accessToken=${token}`, {
-                method: "DELETE"
-            })
-            if (res.ok) {
-                toast.success("Document removed successfully.")
-                setUploadedDeathDocs(prev => prev.filter(d => d.documentId !== documentId))
-            } else {
-                const data = await res.json()
-                toast.error(data.detail || "Failed to remove document.")
+            if (!uploadRes.ok) {
+                const uploadErr = await uploadRes.json().catch(() => ({}))
+                toast.error(uploadErr.detail || "Failed to upload Death Certificate file.")
+                setVerifying(false)
+                return
             }
-        } catch (e) {
-            toast.error("Delete failed.")
-        } finally {
-            setUploadingDeathDoc(false)
-        }
-    }
 
-    // Finalize submission
-    const handleCompleteVerification = async () => {
-        setVerifying(true)
-        try {
-            const res = await fetch(`${BASE_URL}/verification/complete`, {
+            const uploadData = await uploadRes.json()
+            setUploadedDocInfo(uploadData)
+
+            // Step C: Complete / Finalize Submission for Admin Verification
+            const completeRes = await fetch(`${BASE_URL}/verification/complete`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ accessToken: token })
             })
-            const data = await res.json()
-            if (res.ok) {
-                toast.success("Verification request submitted for admin review.")
-                loadDetailsAndStatus()
+
+            if (completeRes.ok) {
+                toast.success("Death Certificate and verification request submitted successfully!")
+                await loadDetailsAndStatus()
+                setFlowStep(4)
             } else {
-                toast.error(data.detail || "Failed to finalize verification.")
+                const compErr = await completeRes.json().catch(() => ({}))
+                toast.error(compErr.detail || "Verification submitted.")
+                await loadDetailsAndStatus()
+                setFlowStep(4)
             }
         } catch (e) {
-            toast.error("Submission failed.")
+            toast.error("Error submitting claim. Please try again.")
         } finally {
             setVerifying(false)
         }
     }
 
-    // Additional document upload (Step 8: MORE_DOCUMENTS_REQUIRED)
-    const handleAdditionalUpload = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!additionalDocFile) return
-        setUploadingAdditional(true)
-
-        try {
-            const formData = new FormData()
-            formData.append("accessToken", token)
-            formData.append("documentType", additionalDocType)
-            formData.append("file", additionalDocFile)
-
-            const res = await fetch(`${BASE_URL}/verification/additional-document`, {
-                method: "POST",
-                body: formData
-            })
-            const data = await res.json()
-            if (res.ok) {
-                toast.success("Additional document uploaded and request re-submitted.")
-                setAdditionalDocFile(null)
-                loadDetailsAndStatus()
-            } else {
-                toast.error(data.detail || "Failed to upload document.")
-            }
-        } catch (e) {
-            toast.error("Upload failed.")
-        } finally {
-            setUploadingAdditional(false)
-        }
-    }
-
-    // Continue to vault (Step 9: APPROVED)
-    const handleContinueToVault = () => {
-        sessionStorage.setItem(`sv_nominee_token_${token}`, token)
-        router.push(`/nominee/vault/${token}`)
-    }
-
-    // Render loading state
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex min-h-screen items-center justify-center bg-[#070b11]">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
             </div>
         )
     }
 
     if (!nomineeDetails) return null
 
-    const hasRequest = requestStatus?.hasRequest
-    const status = requestStatus?.status
+    const ownerName = nomineeDetails.ownerName || "Account Owner"
+    const ownerEmail = nomineeDetails.maskedOwnerEmail || "Registered Owner Email"
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-[#070b11] px-4 py-12 relative overflow-hidden">
-            {/* Background glows */}
+        <main className="flex min-h-screen items-center justify-center bg-[#070b11] px-4 py-12 relative overflow-hidden text-slate-100">
+            {/* Background ambient lighting */}
             <div className="pointer-events-none absolute inset-0">
-                <div className="absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-500/5 blur-[120px]" />
-                <div className="absolute left-1/3 top-2/3 h-[500px] w-[500px] rounded-full bg-indigo-500/5 blur-[100px]" />
+                <div className="absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[140px]" />
+                <div className="absolute left-1/3 top-2/3 h-[500px] w-[500px] rounded-full bg-teal-500/10 blur-[120px]" />
             </div>
 
             <div className="relative w-full max-w-xl z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Card className="border border-border bg-card/60 backdrop-blur-xl rounded-2xl shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600" />
-                    
+                
+                {/* Stepper Progress Bar */}
+                <div className="mb-6 flex items-center justify-between px-2 text-xs font-semibold text-slate-400">
+                    <span className={`flex items-center gap-1.5 ${flowStep >= 1 ? "text-emerald-400 font-bold" : ""}`}>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${flowStep >= 1 ? "bg-emerald-500 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"}`}>1</span>
+                        Owner Details
+                    </span>
+                    <span className="h-px flex-1 bg-slate-800 mx-2" />
+                    <span className={`flex items-center gap-1.5 ${flowStep >= 2 ? "text-emerald-400 font-bold" : ""}`}>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${flowStep >= 2 ? "bg-emerald-500 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"}`}>2</span>
+                        Authenticate
+                    </span>
+                    <span className="h-px flex-1 bg-slate-800 mx-2" />
+                    <span className={`flex items-center gap-1.5 ${flowStep >= 3 ? "text-emerald-400 font-bold" : ""}`}>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${flowStep >= 3 ? "bg-emerald-500 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"}`}>3</span>
+                        Death Certificate
+                    </span>
+                    <span className="h-px flex-1 bg-slate-800 mx-2" />
+                    <span className={`flex items-center gap-1.5 ${flowStep >= 4 ? "text-emerald-400 font-bold" : ""}`}>
+                        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${flowStep >= 4 ? "bg-emerald-500 text-slate-950 font-bold" : "bg-slate-800 text-slate-400"}`}>4</span>
+                        Verification
+                    </span>
+                </div>
+
+                <Card className="border border-slate-800 bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+
                     <CardContent className="p-8">
+                        
                         {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO A: No Claim Submitted Yet (Step 1)
+                            STEP 1: OWNER DETAILS & INHERITANCE NOTICE
                             ───────────────────────────────────────────────────────────── */}
-                        {!hasRequest && (
-                            <div>
-                                <div className="mb-8 flex flex-col items-center text-center">
-                                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-lg shadow-violet-500/10">
+                        {flowStep === 1 && (
+                            <div className="space-y-6">
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10">
                                         <Shield className="h-7 w-7" />
                                     </div>
-                                    <h1 className="text-2xl font-bold text-foreground">Secure Access Portal</h1>
-                                    <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-                                        You have been nominated to access the digital assets of an account owner in the event of their passing.
+                                    <h1 className="text-2xl font-bold text-slate-100">Secure Vault Inheritance Portal</h1>
+                                    <p className="mt-2 text-sm text-slate-400 max-w-md">
+                                        You have been designated as a trusted nominee for a digital asset vault on SecureVault.
                                     </p>
                                 </div>
 
-                                <div className="rounded-xl border border-primary/10 bg-primary/5 p-5 mb-6 text-center space-y-2">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account Owner</p>
-                                    <h3 className="text-lg font-bold text-foreground">{nomineeDetails.name}</h3>
-                                    <div className="flex justify-center items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                                        <span>Registered to:</span>
-                                        <span className="text-violet-400">{nomineeDetails.maskedEmail}</span>
+                                {/* Owner Details Card */}
+                                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 space-y-4">
+                                    <div className="flex items-center justify-between border-b border-emerald-500/15 pb-3">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Account Owner Details</span>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400 border border-emerald-500/20">
+                                            Vault Owner
+                                        </span>
                                     </div>
-                                </div>
 
-                                <form onSubmit={handleClaimSubmit} className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-foreground border-b border-border pb-2">Submit Verification Claim</h4>
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="claimedByName">Your Full Name</Label>
-                                            <Input
-                                                id="claimedByName"
-                                                value={claimForm.claimedByName}
-                                                onChange={(e) => setClaimForm({...claimForm, claimedByName: e.target.value})}
-                                                placeholder="John Doe"
-                                                required
-                                            />
+                                    <div className="space-y-3">
+                                        <div>
+                                            <p className="text-xs text-slate-400">Owner Name</p>
+                                            <p className="text-lg font-bold text-slate-100">{ownerName}</p>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <Label htmlFor="claimedByRelation">Relation to Owner</Label>
-                                            <Input
-                                                id="claimedByRelation"
-                                                value={claimForm.claimedByRelation}
-                                                onChange={(e) => setClaimForm({...claimForm, claimedByRelation: e.target.value})}
-                                                placeholder="Child / Spouse / Executor"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="claimedByEmail">Contact Email</Label>
-                                        <Input
-                                            id="claimedByEmail"
-                                            type="email"
-                                            value={claimForm.claimedByEmail}
-                                            onChange={(e) => setClaimForm({...claimForm, claimedByEmail: e.target.value})}
-                                            placeholder="your-email@example.com"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="claimedByPhone">Contact Phone Number</Label>
-                                        <Input
-                                            id="claimedByPhone"
-                                            value={claimForm.claimedByPhone}
-                                            onChange={(e) => setClaimForm({...claimForm, claimedByPhone: e.target.value})}
-                                            placeholder="+1 555-0199"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="remarks">Additional Notes (Optional)</Label>
-                                        <Input
-                                            id="remarks"
-                                            value={claimForm.remarks}
-                                            onChange={(e) => setClaimForm({...claimForm, remarks: e.target.value})}
-                                            placeholder="Provide any context here..."
-                                        />
-                                    </div>
-
-                                    <Button
-                                        type="submit"
-                                        disabled={verifying}
-                                        className="w-full mt-6 bg-gradient-to-r from-violet-600 to-indigo-600 text-white py-5 rounded-xl font-medium shadow-lg shadow-violet-500/25"
-                                    >
-                                        {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                        Initiate Death Claim & Notify Owner
-                                    </Button>
-                                </form>
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO B: Cooling Period Wait Active (Step 8)
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "COOLING_PERIOD" && (
-                            <div className="text-center py-6 space-y-6">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                                    <Clock className="h-7 w-7 animate-pulse" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold text-foreground">30-Day Cooling Period Active</h2>
-                                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                        A death claim was filed. As a critical security measure, a notification has been sent to the owner's registered contacts.
-                                    </p>
-                                </div>
-
-                                <div className="bg-amber-500/5 border border-amber-500/15 p-4 rounded-xl max-w-md mx-auto text-xs text-amber-400/90 leading-relaxed">
-                                    If this request is legitimate and the owner does not halt the claim, you will receive full instructions to verify your identity and access the vault.
-                                </div>
-
-                                <div className="text-xs text-muted-foreground">
-                                    Estimated access link release: <span className="font-mono text-foreground font-semibold">{new Date(requestStatus.coolingPeriodEnd).toLocaleDateString()}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO C: Request Halted/Cancelled by Owner
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "HALTED" && (
-                            <div className="text-center py-6 space-y-6 animate-in fade-in">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-400">
-                                    <Lock className="h-7 w-7" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold text-foreground">Access Link Halted</h2>
-                                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                                        The account owner has confirmed they are active and has cancelled this claim. Access has been locked for security.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO D: Active Verification Wizard (Steps 2 to 7)
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "NOMINEE_NOTIFIED" && (
-                            <div>
-                                {/* Stepper Header */}
-                                <div className="mb-8 border-b border-border pb-4">
-                                    <div className="flex justify-between items-center text-xs text-muted-foreground">
-                                        <span>INHERITANCE VERIFICATION STEP {activeWizardStep - 1} OF 6</span>
-                                        <span className="font-semibold text-primary">{Math.round(((activeWizardStep - 2) / 5) * 100)}%</span>
-                                    </div>
-                                    <div className="w-full bg-muted h-1 rounded-full mt-2 overflow-hidden">
-                                        <div 
-                                            className="bg-gradient-to-r from-violet-600 to-indigo-600 h-full transition-all duration-500" 
-                                            style={{ width: `${((activeWizardStep - 2) / 5) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Step 2: Email OTP */}
-                                {activeWizardStep === 2 && (
-                                    <div className="space-y-6">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Verify Nominee Email</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                We need to verify access to the email linked to this nomination.
-                                            </p>
-                                        </div>
-
-                                        {!otpSent ? (
-                                            <div className="space-y-4">
-                                                <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 text-center">
-                                                    <p className="text-xs text-muted-foreground font-mono">Registered Email</p>
-                                                    <p className="text-base font-bold text-foreground">{nomineeDetails.maskedEmail}</p>
-                                                </div>
-                                                <Button
-                                                    onClick={() => handleSendOTP("email")}
-                                                    disabled={verifying}
-                                                    className="w-full py-6 text-base font-semibold"
-                                                >
-                                                    {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                                    Request Verification Code
-                                                </Button>
+                                        <div className="grid grid-cols-2 gap-4 pt-1">
+                                            <div>
+                                                <p className="text-xs text-slate-400">Account Email</p>
+                                                <p className="text-sm font-mono text-emerald-300">{ownerEmail}</p>
                                             </div>
-                                        ) : (
-                                            <form onSubmit={(e) => handleVerifyOTP(e, "email")} className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="emailOtp">Enter 6-Digit Code</Label>
-                                                    <Input
-                                                        id="emailOtp"
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value)}
-                                                        className="text-center font-bold tracking-[0.5em] text-xl py-6"
-                                                        placeholder="000000"
-                                                        maxLength={6}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <Button
-                                                    type="submit"
-                                                    disabled={verifying || otp.length < 6}
-                                                    className="w-full py-6 text-base"
-                                                >
-                                                    {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                                    Verify Email Address
-                                                </Button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSendOTP("email")}
-                                                    disabled={timer > 0}
-                                                    className="w-full text-center text-xs text-primary hover:underline mt-2 disabled:opacity-50"
-                                                >
-                                                    {timer > 0 ? `Resend code in ${timer}s` : "Resend code"}
-                                                </button>
-                                            </form>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Step 3: Mobile OTP */}
-                                {activeWizardStep === 3 && (
-                                    <div className="space-y-6">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Verify Nominee Mobile</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Confirm your mobile number is active to set up secure alerts.
-                                            </p>
-                                        </div>
-
-                                        {!otpSent ? (
-                                            <div className="space-y-4">
-                                                <Button
-                                                    onClick={() => handleSendOTP("mobile")}
-                                                    disabled={verifying}
-                                                    className="w-full py-6 text-base font-semibold"
-                                                >
-                                                    {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                                    Request Verification SMS Code
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <form onSubmit={(e) => handleVerifyOTP(e, "mobile")} className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="mobileOtp">Enter 6-Digit SMS Code</Label>
-                                                    <Input
-                                                        id="mobileOtp"
-                                                        value={otp}
-                                                        onChange={(e) => setOtp(e.target.value)}
-                                                        className="text-center font-bold tracking-[0.5em] text-xl py-6"
-                                                        placeholder="000000"
-                                                        maxLength={6}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <Button
-                                                    type="submit"
-                                                    disabled={verifying || otp.length < 6}
-                                                    className="w-full py-6 text-base"
-                                                >
-                                                    {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                                    Verify Mobile Number
-                                                </Button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSendOTP("mobile")}
-                                                    disabled={timer > 0}
-                                                    className="w-full text-center text-xs text-primary hover:underline mt-2 disabled:opacity-50"
-                                                >
-                                                    {timer > 0 ? `Resend SMS in ${timer}s` : "Resend SMS code"}
-                                                </button>
-                                            </form>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Step 4: Government ID Verification */}
-                                {activeWizardStep === 4 && (
-                                    <form onSubmit={handleIdUpload} className="space-y-6">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Upload Government ID</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Provide a legal identification document. Details will be extracted securely using automated OCR.
-                                            </p>
-                                        </div>
-
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {["AADHAAR", "PASSPORT", "DRIVING_LICENSE"].map(type => (
-                                                <button
-                                                    key={type}
-                                                    type="button"
-                                                    onClick={() => setIdType(type)}
-                                                    className={`py-3 px-1 rounded-xl text-xs font-semibold border transition-all ${
-                                                        idType === type
-                                                            ? "bg-violet-500/10 border-violet-500 text-violet-400"
-                                                            : "border-border bg-background/40 text-muted-foreground hover:text-foreground"
-                                                    }`}
-                                                >
-                                                    {type.replace("_", " ")}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <div className="border border-dashed border-border rounded-xl p-8 text-center bg-background/20 relative group hover:border-violet-500/40 transition-colors">
-                                            <input
-                                                type="file"
-                                                accept="image/*,application/pdf"
-                                                onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                required={!idFile}
-                                            />
-                                            <div className="space-y-2">
-                                                <Upload className="mx-auto h-8 w-8 text-muted-foreground group-hover:text-violet-400 transition-colors" />
-                                                <div className="text-sm font-medium text-foreground">
-                                                    {idFile ? idFile.name : "Click or drag & drop to upload ID"}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">PDF, PNG, or JPG (max 10MB)</p>
+                                            <div>
+                                                <p className="text-xs text-slate-400">Designated Nominee</p>
+                                                <p className="text-sm font-medium text-slate-200">{nomineeDetails.name}</p>
                                             </div>
                                         </div>
-
-                                        {ocrProgress > 0 && (
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Simulating Secure OCR Extraction...</span>
-                                                    <span>{ocrProgress}%</span>
-                                                </div>
-                                                <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                                                    <div className="bg-violet-500 h-full transition-all duration-300" style={{ width: `${ocrProgress}%` }} />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <Button
-                                            type="submit"
-                                            disabled={verifying || !idFile}
-                                            className="w-full py-6 text-base font-semibold"
-                                        >
-                                            {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                            Process ID Verification
-                                        </Button>
-                                    </form>
-                                )}
-
-                                {/* Step 5: Selfie Verification */}
-                                {activeWizardStep === 5 && (
-                                    <form onSubmit={handleSelfieUpload} className="space-y-6">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Take a Selfie</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Upload or capture a clear photo of your face. We use biometric liveness detection to match this with your government ID.
-                                            </p>
-                                        </div>
-
-                                        <div className="border border-dashed border-border rounded-xl p-8 text-center bg-background/20 relative group hover:border-violet-500/40 transition-colors">
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                capture="user"
-                                                onChange={(e) => setSelfieFile(e.target.files?.[0] || null)}
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                required={!selfieFile}
-                                            />
-                                            <div className="space-y-2">
-                                                <Camera className="mx-auto h-8 w-8 text-muted-foreground group-hover:text-violet-400 transition-colors" />
-                                                <div className="text-sm font-medium text-foreground">
-                                                    {selfieFile ? selfieFile.name : "Capture using Camera / Upload Photo"}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground">Biometric face match verification</p>
-                                            </div>
-                                        </div>
-
-                                        {selfieProgress > 0 && (
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Performing Liveness Matching...</span>
-                                                    <span>{selfieProgress}%</span>
-                                                </div>
-                                                <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
-                                                    <div className="bg-violet-500 h-full transition-all duration-300" style={{ width: `${selfieProgress}%` }} />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <Button
-                                            type="submit"
-                                            disabled={verifying || !selfieFile}
-                                            className="w-full py-6 text-base font-semibold"
-                                        >
-                                            {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                            Submit & Verify Face
-                                        </Button>
-                                    </form>
-                                )}
-
-                                {/* Step 6: Death evidence uploads */}
-                                {activeWizardStep === 6 && (
-                                    <div className="space-y-6">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Upload Death Evidence</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Please submit documents verifying the account owner's passing.
-                                            </p>
-                                        </div>
-
-                                        {/* Hidden file input */}
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileChange}
-                                            className="hidden"
-                                            accept="image/*,application/pdf"
-                                        />
-
-                                        {/* Primary/Preferred section */}
-                                        <div className="space-y-3">
-                                            <h3 className="text-xs font-semibold text-violet-400 uppercase tracking-wider text-left">Preferred Evidence (Recommended)</h3>
-                                            <div className="space-y-2">
-                                                {[
-                                                    { type: "DEATH_CERTIFICATE", label: "Official Death Certificate", desc: "Preferred primary proof" },
-                                                    { type: "DEATH_REGISTRATION", label: "Govt Death Registration Document", desc: "Official government registration copy" }
-                                                ].map(item => {
-                                                    const uploaded = uploadedDeathDocs.find(d => d.documentType === item.type)
-                                                    return (
-                                                        <div key={item.type} className="flex items-center justify-between p-4 rounded-xl border border-border bg-background/20 hover:border-violet-500/20 transition-colors">
-                                                            <div className="flex items-center gap-3 min-w-0">
-                                                                <FileText className={`h-5 w-5 shrink-0 ${uploaded ? "text-emerald-400" : "text-muted-foreground"}`} />
-                                                                <div className="text-left truncate pr-2">
-                                                                    <p className="text-sm font-semibold text-foreground leading-none">{item.label}</p>
-                                                                    {uploaded ? (
-                                                                        <p className="text-xs text-emerald-400 font-medium truncate flex items-center gap-1 mt-1 font-mono">
-                                                                            <CheckCircle className="h-3.5 w-3.5" />
-                                                                            {uploaded.fileName}
-                                                                        </p>
-                                                                    ) : (
-                                                                        <p className="text-[10px] text-muted-foreground mt-1">{item.desc}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            {uploaded ? (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleRemoveDoc(uploaded.documentId)}
-                                                                    disabled={uploadingDeathDoc}
-                                                                    className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            ) : (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => triggerUpload(item.type)}
-                                                                    disabled={uploadingDeathDoc}
-                                                                    className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 shrink-0"
-                                                                >
-                                                                    {uploadingDeathDoc && activeUploadType === item.type ? (
-                                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                                    ) : (
-                                                                        <>
-                                                                            <Upload className="h-3.5 w-3.5 mr-1" />
-                                                                            Upload
-                                                                        </>
-                                                                    )}
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Alternative Evidence Section */}
-                                        <div className="space-y-3">
-                                            <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider text-left">Alternative Supporting Evidence</h3>
-                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                                                {[
-                                                    { type: "HOSPITAL_RECORD", label: "Hospital Death Record", desc: "Medical report / cause of death" },
-                                                    { type: "CREMATION_CERTIFICATE", label: "Cremation/Burial Certificate", desc: "Official copy from crematorium / cemetery" },
-                                                    { type: "FUNERAL_CERTIFICATE", label: "Funeral Home Receipt", desc: "Receipt or service card" },
-                                                    { type: "OBITUARY", label: "Obituary Document", desc: "Published obituary scan or pdf" },
-                                                    { type: "PROBATE_DOC", label: "Probate Document", desc: "Validated probate court copy" },
-                                                    { type: "EXECUTOR_LETTER", label: "Letter of Executorship", desc: "Legal executor certificate" },
-                                                    { type: "COURT_ORDER", label: "Court Order", desc: "Judicial order regarding succession" },
-                                                    { type: "AFFIDAVIT", label: "Sworn Lawyer Affidavit", desc: "Notarized affidavit copy" },
-                                                    { type: "NEWSPAPER_NOTICE", label: "Newspaper Notice", desc: "Clipping / publication scan" },
-                                                    { type: "SUPPORTING_EVIDENCE", label: "Other Supporting Evidence", desc: "Any other relevant document" }
-                                                ].map(item => {
-                                                    const uploaded = uploadedDeathDocs.find(d => d.documentType === item.type)
-                                                    return (
-                                                        <div key={item.type} className="flex items-center justify-between p-3 rounded-lg border border-border bg-background/20 hover:border-violet-500/20 transition-colors">
-                                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                                <FileText className={`h-4 w-4 shrink-0 ${uploaded ? "text-emerald-400" : "text-muted-foreground"}`} />
-                                                                <div className="text-left truncate pr-2">
-                                                                    <p className="text-xs font-semibold text-foreground leading-none">{item.label}</p>
-                                                                    {uploaded ? (
-                                                                        <p className="text-[10px] text-emerald-400 font-medium truncate flex items-center gap-1 mt-1 font-mono">
-                                                                            <CheckCircle className="h-3 w-3" />
-                                                                            {uploaded.fileName}
-                                                                        </p>
-                                                                    ) : (
-                                                                        <p className="text-[9px] text-muted-foreground mt-1">{item.desc}</p>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            {uploaded ? (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleRemoveDoc(uploaded.documentId)}
-                                                                    disabled={uploadingDeathDoc}
-                                                                    className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0 h-7 w-7"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                </Button>
-                                                            ) : (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => triggerUpload(item.type)}
-                                                                    disabled={uploadingDeathDoc}
-                                                                    className="border-violet-500/20 text-violet-400 hover:bg-violet-500/10 shrink-0 h-8 text-[11px]"
-                                                                >
-                                                                    {uploadingDeathDoc && activeUploadType === item.type ? (
-                                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    ) : (
-                                                                        <>
-                                                                            <Upload className="h-3 w-3 mr-1" />
-                                                                            Upload
-                                                                        </>
-                                                                    )}
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        <Button
-                                            onClick={() => {
-                                                if (uploadedDeathDocs.length === 0) {
-                                                    toast.error("Please upload at least one piece of death evidence.")
-                                                    return
-                                                }
-                                                loadDetailsAndStatus()
-                                            }}
-                                            className="w-full py-6 text-base font-semibold"
-                                        >
-                                            Next Step — Review Submission <ArrowRight className="h-4 w-4 ml-2" />
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {/* Step 7: Review checklist and finalize */}
-                                {activeWizardStep === 7 && (
-                                    <div className="space-y-6 animate-in fade-in">
-                                        <div className="text-center space-y-2">
-                                            <h2 className="text-xl font-bold text-foreground">Review & Submit</h2>
-                                            <p className="text-xs text-muted-foreground">
-                                                Verify that all verification requirements are met before final submission.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-3 bg-background/40 border border-border rounded-xl p-5">
-                                            <div className="flex justify-between items-center py-2 border-b border-border/40">
-                                                <span className="text-sm font-medium text-foreground">Email Verified</span>
-                                                <CheckCircle className="h-5 w-5 text-emerald-400" />
-                                            </div>
-                                            <div className="flex justify-between items-center py-2 border-b border-border/40">
-                                                <span className="text-sm font-medium text-foreground">Mobile Verified</span>
-                                                <CheckCircle className="h-5 w-5 text-emerald-400" />
-                                            </div>
-                                            <div className="flex justify-between items-center py-2 border-b border-border/40">
-                                                <span className="text-sm font-medium text-foreground">Government ID Verified</span>
-                                                <CheckCircle className="h-5 w-5 text-emerald-400" />
-                                            </div>
-                                            <div className="flex justify-between items-center py-2 border-b border-border/40">
-                                                <span className="text-sm font-medium text-foreground">Biometric Face Match Verified</span>
-                                                <CheckCircle className="h-5 w-5 text-emerald-400" />
-                                            </div>
-                                            <div className="flex justify-between items-center py-2">
-                                                <span className="text-sm font-medium text-foreground">Death Evidence Documents</span>
-                                                <div className="flex items-center gap-1.5 text-emerald-400 text-sm font-semibold">
-                                                    <span>{requestStatus?.checklist?.deathEvidenceCount || uploadedDeathDocs.length} Uploaded</span>
-                                                    <CheckCircle className="h-5 w-5" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-xl border border-primary/10 bg-primary/5 p-4 flex gap-3 text-xs text-muted-foreground items-start">
-                                            <Clock className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                            <p>
-                                                <strong>Estimated Manual Review Time:</strong> SecureVault security officers typically review and approve inheritance access requests within <strong>3 business days</strong>.
-                                            </p>
-                                        </div>
-
-                                        <Button
-                                            onClick={handleCompleteVerification}
-                                            disabled={verifying}
-                                            className="w-full py-6 text-base font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-500/25"
-                                        >
-                                            {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                            Submit Request for Administrative Review
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO E: Request Pending Review (Step 8)
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "PENDING_REVIEW" && (
-                            <div className="text-center py-6 space-y-6 animate-in fade-in">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 shadow-lg shadow-violet-500/10">
-                                    <Clock className="h-7 w-7 animate-pulse" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold text-foreground">Verification Under Review</h2>
-                                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                        Your submitted checklist is currently being manually reviewed by our compliance administrators.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-3 max-w-md mx-auto bg-background/30 border border-border p-4 rounded-xl text-left text-xs space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Request ID:</span>
-                                        <span className="font-mono text-foreground">{requestStatus.requestId}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Estimated response:</span>
-                                        <span className="text-primary font-semibold">1-3 Business Days</span>
-                                    </div>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground">
-                                    You will receive a notification via email once this review is complete.
-                                </p>
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO F: Additional Documents Required (Step 8)
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "MORE_DOCUMENTS_REQUIRED" && (
-                            <div className="space-y-6 animate-in fade-in">
-                                <div className="text-center space-y-2">
-                                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-lg shadow-amber-500/10">
-                                        <AlertCircle className="h-7 w-7" />
-                                    </div>
-                                    <h2 className="text-xl font-bold text-foreground">Additional Evidence Required</h2>
-                                    <p className="text-xs text-muted-foreground">
-                                        Our administrative review team requires additional supporting documentation to process this inheritance claim.
-                                    </p>
-                                </div>
-
-                                {requestStatus.reviewHistory?.length > 0 && (
-                                    <div className="bg-amber-500/5 border border-amber-500/15 p-4 rounded-xl text-xs text-amber-400">
-                                        <strong>Admin comments:</strong>
-                                        <p className="mt-1 leading-relaxed">
-                                            "{requestStatus.reviewHistory[requestStatus.reviewHistory.length - 1].remarks}"
-                                        </p>
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleAdditionalUpload} className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="addDocType">Document Type</Label>
-                                        <select
-                                            id="addDocType"
-                                            value={additionalDocType}
-                                            onChange={(e) => setAdditionalDocType(e.target.value)}
-                                            className="w-full bg-input border border-border text-foreground text-sm rounded-lg p-2.5 outline-none focus:border-violet-500"
-                                        >
-                                            <option value="DEATH_CERTIFICATE">Official Death Certificate</option>
-                                            <option value="DEATH_REGISTRATION">Govt Death Registration Document</option>
-                                            <option value="HOSPITAL_RECORD">Hospital Death Record</option>
-                                            <option value="CREMATION_CERTIFICATE">Cremation/Burial Certificate</option>
-                                            <option value="OBITUARY">Obituary Document</option>
-                                            <option value="PROBATE_DOC">Probate Document</option>
-                                            <option value="SUPPORTING_EVIDENCE">Other Supporting Evidence</option>
-                                        </select>
                                     </div>
 
-                                    <div className="border border-dashed border-border rounded-xl p-8 text-center bg-background/20 relative group hover:border-violet-500/40 transition-colors">
-                                        <input
-                                            type="file"
-                                            accept="image/*,application/pdf"
-                                            onChange={(e) => setAdditionalDocFile(e.target.files?.[0] || null)}
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                            required
-                                        />
-                                        <div className="space-y-2">
-                                            <Upload className="mx-auto h-8 w-8 text-muted-foreground group-hover:text-violet-400 transition-colors" />
-                                            <div className="text-sm font-medium text-foreground">
-                                                {additionalDocFile ? additionalDocFile.name : "Click or drag to upload additional doc"}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">PDF, PNG, or JPG (max 10MB)</p>
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        type="submit"
-                                        disabled={uploadingAdditional || !additionalDocFile}
-                                        className="w-full py-6 text-base font-semibold"
-                                    >
-                                        {uploadingAdditional ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                                        Re-Submit Request for Review
-                                    </Button>
-                                </form>
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO G: Request Rejected by Reviewers
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "REJECTED" && (
-                            <div className="text-center py-6 space-y-6 animate-in fade-in">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-400 shadow-lg shadow-red-500/10">
-                                    <XCircle className="h-7 w-7" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold text-foreground">Verification Rejected</h2>
-                                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                        Your request for inheritance access was declined during compliance verification.
-                                    </p>
-                                </div>
-
-                                {requestStatus.reviewHistory?.length > 0 && (
-                                    <div className="bg-red-500/5 border border-red-500/15 p-4 rounded-xl max-w-md mx-auto text-left text-xs text-red-400">
-                                        <strong>Rejection Reason:</strong>
-                                        <p className="mt-1 leading-relaxed">
-                                            "{requestStatus.reviewHistory[requestStatus.reviewHistory.length - 1].remarks}"
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ─────────────────────────────────────────────────────────────
-                            SCENARIO H: Request Approved (Step 9)
-                            ───────────────────────────────────────────────────────────── */}
-                        {hasRequest && status === "APPROVED" && (
-                            <div className="text-center py-6 space-y-6 animate-in fade-in">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/10">
-                                    <UserCheck className="h-9 w-9 animate-bounce" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-2xl font-bold text-foreground">Verification Successful</h2>
-                                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                        Your inheritance access has been verified and authorized by our security officers.
-                                    </p>
-                                </div>
-
-                                <div className="bg-emerald-500/5 border border-emerald-500/15 p-4 rounded-xl max-w-md mx-auto text-xs text-emerald-400 leading-relaxed flex gap-2.5 items-start text-left">
-                                    <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-                                    <div>
-                                        <strong>Decryption Session Active:</strong> A secure access link has been generated. Press the button below to view the released assets in your nominee dashboard.
+                                    <div className="rounded-lg bg-slate-950/60 p-3.5 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+                                        ℹ️ <strong>Ownership Notice:</strong> The digital assets, credentials, and legal files inside this vault belong exclusively to <strong>{ownerName}</strong>. Following prolonged vault inactivity, you are authorized to authenticate and submit proof of death to claim inheritance.
                                     </div>
                                 </div>
 
                                 <Button
-                                    onClick={handleContinueToVault}
-                                    className="w-full py-6 text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all"
+                                    onClick={() => setFlowStep(2)}
+                                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold py-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all text-base"
                                 >
-                                    Continue to SecureVault <ArrowRight className="h-5 w-5 ml-2" />
+                                    Proceed to Nominee Login & Authenticate <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </div>
                         )}
+
+                        {/* ─────────────────────────────────────────────────────────────
+                            STEP 2: NOMINEE AUTHENTICATION / LOGIN (EMAIL OTP)
+                            ───────────────────────────────────────────────────────────── */}
+                        {flowStep === 2 && (
+                            <div className="space-y-6">
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                                        <KeyRound className="h-6 w-6" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-100">Nominee Authentication</h2>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Authenticate your email address to confirm identity before accessing the claim form.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 space-y-2 text-xs">
+                                    <div className="flex justify-between text-slate-400">
+                                        <span>Vault Owner:</span>
+                                        <span className="font-semibold text-slate-200">{ownerName}</span>
+                                    </div>
+                                    <div className="flex justify-between text-slate-400">
+                                        <span>Nominee Email:</span>
+                                        <span className="font-mono text-emerald-400">{nomineeDetails.maskedEmail}</span>
+                                    </div>
+                                </div>
+
+                                {!otpSent ? (
+                                    <div className="space-y-4 pt-2">
+                                        <p className="text-xs text-slate-300 text-center">
+                                            We will send a 6-digit authentication security code to <strong>{nomineeDetails.maskedEmail}</strong>.
+                                        </p>
+                                        <Button
+                                            onClick={handleSendOTP}
+                                            disabled={verifying}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-5 rounded-xl"
+                                        >
+                                            {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Mail className="h-5 w-5 mr-2" />}
+                                            Send Authentication Code
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleVerifyOTP} className="space-y-4 pt-2">
+                                        <div className="space-y-2 text-center">
+                                            <Label htmlFor="otpCode" className="text-xs text-slate-300">Enter 6-Digit Verification Code</Label>
+                                            <Input
+                                                id="otpCode"
+                                                value={otp}
+                                                onChange={(e) => setOtp(e.target.value)}
+                                                placeholder="123456"
+                                                maxLength={6}
+                                                className="text-center font-mono text-2xl tracking-[10px] py-6 border-slate-700 bg-slate-950 text-emerald-400 focus:border-emerald-500"
+                                                autoFocus
+                                                required
+                                            />
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            disabled={verifying || otp.length < 6}
+                                            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-5 rounded-xl"
+                                        >
+                                            {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <UserCheck className="h-5 w-5 mr-2" />}
+                                            Verify Code & Login
+                                        </Button>
+
+                                        <div className="flex justify-between items-center text-xs text-slate-400 pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFlowStep(1)}
+                                                className="hover:text-slate-200 underline"
+                                            >
+                                                ← Back to Owner Details
+                                            </button>
+                                            {timer > 0 ? (
+                                                <span>Resend code in {timer}s</span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSendOTP}
+                                                    className="text-emerald-400 hover:underline font-medium"
+                                                >
+                                                    Resend Code
+                                                </button>
+                                            )}
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ─────────────────────────────────────────────────────────────
+                            STEP 3: DEATH CERTIFICATE & CLAIM FORM
+                            ───────────────────────────────────────────────────────────── */}
+                        {flowStep === 3 && (
+                            <form onSubmit={handleSubmitDeathCertificateForm} className="space-y-5">
+                                <div className="flex flex-col items-center text-center mb-2">
+                                    <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                        <FileCheck className="h-6 w-6" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-100">Death Certificate Submission Form</h2>
+                                    <p className="text-xs text-slate-400">
+                                        Submit legal proof of death for account owner <strong>{ownerName}</strong>
+                                    </p>
+                                </div>
+
+                                {/* Claimant Details */}
+                                <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                        <UserCheck className="h-4 w-4" /> 1. Claimant Information
+                                    </h4>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="claimedByName" className="text-xs">Your Full Name *</Label>
+                                            <Input
+                                                id="claimedByName"
+                                                value={claimForm.claimedByName}
+                                                onChange={(e) => setClaimForm({...claimForm, claimedByName: e.target.value})}
+                                                placeholder="Claimant Name"
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="claimedByRelation" className="text-xs">Relationship to Owner *</Label>
+                                            <Input
+                                                id="claimedByRelation"
+                                                value={claimForm.claimedByRelation}
+                                                onChange={(e) => setClaimForm({...claimForm, claimedByRelation: e.target.value})}
+                                                placeholder="Spouse / Child / Executor"
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="claimedByEmail" className="text-xs">Contact Email *</Label>
+                                            <Input
+                                                id="claimedByEmail"
+                                                type="email"
+                                                value={claimForm.claimedByEmail}
+                                                onChange={(e) => setClaimForm({...claimForm, claimedByEmail: e.target.value})}
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="claimedByPhone" className="text-xs">Contact Phone *</Label>
+                                            <Input
+                                                id="claimedByPhone"
+                                                value={claimForm.claimedByPhone}
+                                                onChange={(e) => setClaimForm({...claimForm, claimedByPhone: e.target.value})}
+                                                placeholder="+1 555-0199"
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Death Certificate & Event Details */}
+                                <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                        <FileText className="h-4 w-4" /> 2. Death Event Details
+                                    </h4>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="dateOfDeath" className="text-xs">Date of Death</Label>
+                                            <Input
+                                                id="dateOfDeath"
+                                                type="date"
+                                                value={claimForm.dateOfDeath}
+                                                onChange={(e) => setClaimForm({...claimForm, dateOfDeath: e.target.value})}
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="deathCertificateNumber" className="text-xs">Certificate / Reg Number</Label>
+                                            <Input
+                                                id="deathCertificateNumber"
+                                                value={claimForm.deathCertificateNumber}
+                                                onChange={(e) => setClaimForm({...claimForm, deathCertificateNumber: e.target.value})}
+                                                placeholder="e.g. DC-98765432"
+                                                className="bg-slate-900 border-slate-700 text-xs h-9"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <Label htmlFor="placeOfDeath" className="text-xs">Place / Location of Death</Label>
+                                        <Input
+                                            id="placeOfDeath"
+                                            value={claimForm.placeOfDeath}
+                                            onChange={(e) => setClaimForm({...claimForm, placeOfDeath: e.target.value})}
+                                            placeholder="City, State / Hospital Name"
+                                            className="bg-slate-900 border-slate-700 text-xs h-9"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Upload Death Certificate */}
+                                <div className="space-y-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                                        <Upload className="h-4 w-4" /> 3. Upload Death Certificate *
+                                    </h4>
+
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileSelect}
+                                        accept=".pdf,.png,.jpg,.jpeg"
+                                        className="hidden"
+                                    />
+
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="border-2 border-dashed border-slate-700 hover:border-emerald-500 rounded-xl p-5 text-center cursor-pointer bg-slate-950/60 transition-all"
+                                    >
+                                        {deathDocFile ? (
+                                            <div className="flex items-center justify-center gap-2 text-emerald-400 font-medium text-xs">
+                                                <FileCheck className="h-5 w-5" />
+                                                <span>{deathDocFile.name} ({(deathDocFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                <Upload className="h-6 w-6 text-slate-400 mx-auto" />
+                                                <p className="text-xs font-medium text-slate-200">Click to Browse & Upload Official Death Certificate</p>
+                                                <p className="text-[11px] text-slate-400">PDF, PNG, or JPG (Max 10MB)</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    disabled={verifying}
+                                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold py-5 rounded-xl shadow-lg shadow-emerald-500/20 text-sm"
+                                >
+                                    {verifying ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Shield className="h-5 w-5 mr-2" />}
+                                    Submit Death Certificate for Verification
+                                </Button>
+                            </form>
+                        )}
+
+                        {/* ─────────────────────────────────────────────────────────────
+                            STEP 4: SUBMISSION CONFIRMATION & VERIFICATION PENDING
+                            ───────────────────────────────────────────────────────────── */}
+                        {flowStep === 4 && (
+                            <div className="text-center py-6 space-y-6">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-xl shadow-emerald-500/10">
+                                    <CheckCircle className="h-9 w-9" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400 border border-amber-500/20">
+                                        <Clock className="h-3.5 w-3.5 animate-spin" /> PENDING COMPLIANCE VERIFICATION
+                                    </span>
+                                    <h2 className="text-2xl font-bold text-slate-100">Verification Request Submitted</h2>
+                                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                        Death Certificate and claim details for <strong>{ownerName}</strong> have been recorded successfully.
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-left space-y-2.5 text-xs text-slate-300">
+                                    <div className="flex justify-between border-b border-slate-800 pb-2">
+                                        <span className="text-slate-400">Account Owner:</span>
+                                        <span className="font-semibold text-slate-100">{ownerName}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-slate-800 pb-2">
+                                        <span className="text-slate-400">Claimant:</span>
+                                        <span className="font-semibold text-slate-100">{claimForm.claimedByName || nomineeDetails.name}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Status:</span>
+                                        <span className="font-semibold text-emerald-400">Under Review by Compliance Team</span>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-slate-400 leading-relaxed">
+                                    Once our compliance team approves the submitted Death Certificate, you will receive full secure access instructions at <strong>{nomineeDetails.maskedEmail}</strong>.
+                                </p>
+                            </div>
+                        )}
+
                     </CardContent>
                 </Card>
             </div>
