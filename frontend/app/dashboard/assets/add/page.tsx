@@ -78,12 +78,51 @@ export default function AddAssetPage() {
     }
   }, [file])
 
+  const handleRedirectToAddNominee = () => {
+    if (typeof window !== "undefined") {
+      const draft = { type, name, description, content, editId }
+      sessionStorage.setItem("sv_asset_draft", JSON.stringify(draft))
+    }
+    const currentPath = editId ? `/dashboard/assets/add?edit=${editId}` : "/dashboard/assets/add"
+    router.push(`/dashboard/nominees?returnTo=${encodeURIComponent(currentPath)}`)
+  }
+
   useEffect(() => {
     const userId = getCurrentUserId()
     if (userId) {
+      // Check for saved draft form state
+      if (typeof window !== "undefined") {
+        const draftStr = sessionStorage.getItem("sv_asset_draft")
+        if (draftStr) {
+          try {
+            const draft = JSON.parse(draftStr)
+            if (draft.type) setType(draft.type)
+            if (draft.name) setName(draft.name)
+            if (draft.description) setDescription(draft.description)
+            if (draft.content) setContent(draft.content)
+            if (draft.editId) setEditId(draft.editId)
+          } catch (e) {
+            // ignore JSON parse error
+          }
+          sessionStorage.removeItem("sv_asset_draft")
+        }
+      }
+
       secureFetch(`/nominees/${userId}`)
         .then(res => res.json())
-        .then(data => setNominees(data))
+        .then((data: Nominee[]) => {
+          setNominees(data)
+          // Auto-select newly added nominee if returned from Nominees page
+          if (typeof window !== "undefined") {
+            const latestId = sessionStorage.getItem("sv_latest_added_nominee_id")
+            if (latestId) {
+              sessionStorage.removeItem("sv_latest_added_nominee_id")
+              if (data.some(n => n.id === latestId)) {
+                setSelectedNomineeIds(prev => Array.from(new Set([...prev, latestId])))
+              }
+            }
+          }
+        })
         .catch(() => toast.error("Failed to fetch nominees"))
 
       const queryParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
@@ -473,7 +512,7 @@ export default function AddAssetPage() {
               ) : (
                 <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 flex flex-col gap-2">
                   <p className="text-sm font-medium text-warning">No Nominees Found</p>
-                  <Button variant="link" size="sm" className="h-auto p-0 justify-start" onClick={() => router.push("/dashboard/nominees")}>
+                  <Button variant="link" size="sm" className="h-auto p-0 justify-start" onClick={handleRedirectToAddNominee}>
                     Add a nominee first →
                   </Button>
                 </div>

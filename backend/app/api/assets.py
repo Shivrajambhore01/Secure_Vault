@@ -252,7 +252,13 @@ async def get_asset_file(asset_id: str, request: Request, token: Optional[str] =
                 nominee_id = nominee.get("id")
                 asset_nominee_ids = asset.get("nomineeIds") or ([asset.get("nomineeId")] if asset.get("nomineeId") else [])
                 if nominee_id in asset_nominee_ids:
-                    authorized = True
+                    # Enforce that nominee's death verification claim is APPROVED
+                    ver_req = await db["verification_requests"].find_one({
+                        "nomineeId": nominee_id,
+                        "status": "APPROVED"
+                    })
+                    if ver_req:
+                        authorized = True
 
     if not authorized:
         raise HTTPException(status_code=401, detail="Unauthorized access to this asset")

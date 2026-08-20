@@ -25,11 +25,8 @@ async def _send_email(to: str, subject: str, html: str, from_name: str = "Secure
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
 
-        sender_name = from_name or "SecureVault"
-        sender_header = f"{sender_name} <{settings.EMAIL_USER}>"
-
         msg = MIMEMultipart("alternative")
-        msg["From"] = sender_header
+        msg["From"] = settings.EMAIL_USER
         msg["To"] = to
         msg["Subject"] = subject
         msg["X-Mailer"] = "SecureVault Notification Service"
@@ -332,7 +329,7 @@ async def process_reengagement_for_user(user_id: str):
                 await trigger_reengagement_call(user_id)
 
             # 3. Trigger Nominee Access at 5 minutes (after 4 mins call + 1 min verification period)
-            if elapsed >= 5 * 60 * 1000 and user.get("reEngagementCallSent") and not user.get("nomineesNotified"):
+            if elapsed >= 5 * 60 * 1000 and not user.get("nomineesNotified"):
                 print(f"[RE-ENGAGEMENT-V4][TEST] Re-engagement cycle COMPLETED for {user['email']}. Notifying nominees...")
                 await notify_nominees_for_user(user_id)
 
@@ -404,7 +401,42 @@ async def process_reengagement_for_user(user_id: str):
 # ------------------------------------------------------------------
 async def _run_inactivity_check():
     try:
-        # Only process users who are currently logged out (logoutTime is set)
+        now_dt = datetime.now(timezone.utc)
+        # Find active users (no logoutTime set) whose heartbeats have stopped
+        active_users = await users_col.find({
+            "nomineesNotified": {"$ne": True},
+            "logoutTime": None
+        }).to_list(length=None)
+
+        for u in active_users:
+            last_active_str = u.get("lastActive")
+            if not last_active_str:
+                await users_col.update_one({"_id": u["_id"]}, {"$set": {"lastActive": now_dt.isoformat()}})
+                continue
+
+            last_active = datetime.fromisoformat(last_active_str.replace("Z", "+00:00"))
+            elapsed_seconds = (now_dt - last_active).total_seconds()
+
+            test_mode = settings.INACTIVITY_TEST_MODE
+            user_inactivity_period = float(u.get("inactivityPeriod", 6))
+            is_user_test = test_mode or (user_inactivity_period < 1)
+
+            # Threshold for heartbeat timeout (e.g. 60 seconds for test mode, 5 minutes for production)
+            threshold = 60 if is_user_test else 300
+
+            if elapsed_seconds > threshold:
+                print(f"[RE-ENGAGEMENT-V4] User {u.get('email')} has been inactive for {elapsed_seconds:.1f}s. Automatically setting logoutTime to lastActive.")
+                await users_col.update_one(
+                    {"_id": u["_id"]},
+                    {"$set": {
+                        "logoutTime": last_active_str,
+                        "reEngagementCallSent": False,
+                        "reEngagementMessagesSent": 0,
+                        "reEngagementLastMessageAt": None,
+                    }}
+                )
+
+        # Process users who are currently logged out (logoutTime is set)
         # and have not yet completed the nominee notification cycle
         users_to_check = await users_col.find({
             "nomineesNotified": {"$ne": True},

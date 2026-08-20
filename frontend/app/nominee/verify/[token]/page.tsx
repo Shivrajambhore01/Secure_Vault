@@ -13,7 +13,12 @@ import {
     UserCheck,
     FileCheck,
     KeyRound,
-    Clock
+    Clock,
+    XCircle,
+    AlertTriangle,
+    FolderKey,
+    ShieldAlert,
+    RefreshCw
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -104,8 +109,14 @@ export default function NomineeVerifyPage() {
             if (statusRes.ok) {
                 const statusData = await statusRes.json()
                 setRequestStatus(statusData)
-                if (statusData.hasRequest && (statusData.status === "PENDING_REVIEW" || statusData.status === "APPROVED" || statusData.status === "MORE_DOCUMENTS_REQUIRED")) {
-                    setFlowStep(4)
+                if (statusData.hasRequest && statusData.status) {
+                    const statusStr = statusData.status;
+                    if (["PENDING", "PENDING_REVIEW", "UNDER_REVIEW", "APPROVED", "COOLING_PERIOD", "CLAIMED", "NOMINEE_NOTIFIED"].includes(statusStr)) {
+                        router.push(`/nominee/status/${token}`)
+                        return
+                    } else {
+                        setFlowStep(3)
+                    }
                 }
             }
         } catch (error) {
@@ -252,13 +263,11 @@ export default function NomineeVerifyPage() {
 
             if (completeRes.ok) {
                 toast.success("Death Certificate and verification request submitted successfully!")
-                await loadDetailsAndStatus()
-                setFlowStep(4)
+                router.push(`/nominee/status/${token}`)
             } else {
                 const compErr = await completeRes.json().catch(() => ({}))
                 toast.error(compErr.detail || "Verification submitted.")
-                await loadDetailsAndStatus()
-                setFlowStep(4)
+                router.push(`/nominee/status/${token}`)
             }
         } catch (e) {
             toast.error("Error submitting claim. Please try again.")
@@ -625,38 +634,143 @@ export default function NomineeVerifyPage() {
                             ───────────────────────────────────────────────────────────── */}
                         {flowStep === 4 && (
                             <div className="text-center py-6 space-y-6">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-xl shadow-emerald-500/10">
-                                    <CheckCircle className="h-9 w-9" />
-                                </div>
+                                {requestStatus?.status === "APPROVED" && (
+                                    <>
+                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-xl shadow-emerald-500/10">
+                                            <CheckCircle className="h-9 w-9" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/20">
+                                                CLAIM APPROVED ✅
+                                            </span>
+                                            <h2 className="text-2xl font-bold text-slate-100">Verification Approved</h2>
+                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                                Your death verification request for <strong>{ownerName}</strong> has been approved by the compliance team.
+                                            </p>
+                                        </div>
+                                        <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-left space-y-2.5 text-xs text-slate-300">
+                                            <p className="text-slate-400 leading-relaxed mb-2">
+                                                Access to your assigned inherited digital assets has been unlocked.
+                                            </p>
+                                            <div className="flex justify-between border-t border-slate-800/50 pt-2">
+                                                <span className="text-slate-400">Owner Name:</span>
+                                                <span className="font-semibold text-slate-100">{ownerName}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-400">Access Mode:</span>
+                                                <span className="font-semibold text-emerald-400 font-mono">View-Only (No Download)</span>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            onClick={() => {
+                                                sessionStorage.setItem(`sv_nominee_token_${token}`, token);
+                                                router.push(`/nominee/vault/${token}`);
+                                            }}
+                                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold py-5 rounded-xl shadow-lg shadow-emerald-500/20 text-sm"
+                                        >
+                                            <FolderKey className="h-5 w-5 mr-2" /> Access Approved Inherited Assets
+                                        </Button>
+                                    </>
+                                )}
 
-                                <div className="space-y-2">
-                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400 border border-amber-500/20">
-                                        <Clock className="h-3.5 w-3.5 animate-spin" /> PENDING COMPLIANCE VERIFICATION
-                                    </span>
-                                    <h2 className="text-2xl font-bold text-slate-100">Verification Request Submitted</h2>
-                                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                                        Death Certificate and claim details for <strong>{ownerName}</strong> have been recorded successfully.
-                                    </p>
-                                </div>
+                                {requestStatus?.status === "REJECTED" && (
+                                    <>
+                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 shadow-xl shadow-red-500/10">
+                                            <XCircle className="h-9 w-9" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-3 py-1 text-xs font-bold text-red-400 border border-red-500/20">
+                                                CLAIM REJECTED ❌
+                                            </span>
+                                            <h2 className="text-2xl font-bold text-slate-100">Verification Rejected</h2>
+                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                                Your death verification request for <strong>{ownerName}</strong> could not be approved by compliance.
+                                            </p>
+                                        </div>
+                                        <div className="bg-red-950/20 border border-red-500/20 p-4 rounded-xl text-left space-y-2.5 text-xs text-red-300">
+                                            <p className="font-bold text-red-400">Rejection Reason / Guidance:</p>
+                                            <p className="italic leading-relaxed">{requestStatus?.remarks || "The uploaded death certificate details could not be verified. Please ensure the uploaded file is legible and correct."}</p>
+                                        </div>
+                                        <Button
+                                            onClick={() => {
+                                                setFlowStep(3); // Reset to Step 3 for resubmission
+                                                setDeathDocFile(null);
+                                            }}
+                                            className="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-slate-100 font-bold py-5 rounded-xl shadow-lg shadow-red-500/20 text-sm"
+                                        >
+                                            <RefreshCw className="h-5 w-5 mr-2 animate-spin-slow" /> Resubmit Claim & Upload Documents
+                                        </Button>
+                                    </>
+                                )}
 
-                                <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-left space-y-2.5 text-xs text-slate-300">
-                                    <div className="flex justify-between border-b border-slate-800 pb-2">
-                                        <span className="text-slate-400">Account Owner:</span>
-                                        <span className="font-semibold text-slate-100">{ownerName}</span>
-                                    </div>
-                                    <div className="flex justify-between border-b border-slate-800 pb-2">
-                                        <span className="text-slate-400">Claimant:</span>
-                                        <span className="font-semibold text-slate-100">{claimForm.claimedByName || nomineeDetails.name}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Status:</span>
-                                        <span className="font-semibold text-emerald-400">Under Review by Compliance Team</span>
-                                    </div>
-                                </div>
+                                {requestStatus?.status === "MORE_DOCUMENTS_REQUIRED" && (
+                                    <>
+                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-xl shadow-amber-500/10">
+                                            <AlertTriangle className="h-9 w-9" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400 border border-amber-500/20">
+                                                ADDITIONAL EVIDENCE REQUESTED
+                                            </span>
+                                            <h2 className="text-2xl font-bold text-slate-100">Documents Required</h2>
+                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                                Compliance requires further evidence to verify the claim.
+                                            </p>
+                                        </div>
+                                        <div className="bg-amber-950/20 border border-amber-500/20 p-4 rounded-xl text-left space-y-2.5 text-xs text-amber-300">
+                                            <p className="font-bold text-amber-400">Message from Compliance:</p>
+                                            <p className="italic leading-relaxed">{requestStatus?.remarks || "Please upload relationship proof or matching official ID."}</p>
+                                        </div>
+                                        <Button
+                                            onClick={() => {
+                                                setFlowStep(3); // Route to upload area
+                                                setDeathDocFile(null);
+                                            }}
+                                            className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold py-5 rounded-xl shadow-lg shadow-amber-500/20 text-sm"
+                                        >
+                                            <Upload className="h-5 w-5 mr-2" /> Upload Supporting Documents
+                                        </Button>
+                                    </>
+                                )}
 
-                                <p className="text-xs text-slate-400 leading-relaxed">
-                                    Once our compliance team approves the submitted Death Certificate, you will receive full secure access instructions at <strong>{nomineeDetails.maskedEmail}</strong>.
-                                </p>
+                                {requestStatus?.status !== "APPROVED" && requestStatus?.status !== "REJECTED" && requestStatus?.status !== "MORE_DOCUMENTS_REQUIRED" && (
+                                    <>
+                                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-xl shadow-emerald-500/10">
+                                            <CheckCircle className="h-9 w-9" />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-400 border border-amber-500/20">
+                                                <Clock className="h-3.5 w-3.5 animate-spin" /> PENDING COMPLIANCE VERIFICATION
+                                            </span>
+                                            <h2 className="text-2xl font-bold text-slate-100">Verification Request Submitted</h2>
+                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                                Death Certificate and claim details for <strong>{ownerName}</strong> have been recorded successfully.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-slate-950/60 border border-slate-800 p-4 rounded-xl text-left space-y-2.5 text-xs text-slate-300">
+                                            <div className="flex justify-between border-b border-slate-800 pb-2">
+                                                <span className="text-slate-400">Account Owner:</span>
+                                                <span className="font-semibold text-slate-100">{ownerName}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-800 pb-2">
+                                                <span className="text-slate-400">Claimant:</span>
+                                                <span className="font-semibold text-slate-100">{claimForm.claimedByName || nomineeDetails.name}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-slate-400">Status:</span>
+                                                <span className="font-semibold text-emerald-400">
+                                                    {requestStatus?.status === "UNDER_REVIEW" ? "Under Active Review by Compliance Team" : "Pending Review by Compliance Team"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-xs text-slate-400 leading-relaxed">
+                                            Once our compliance team approves the submitted Death Certificate, you will receive full secure access instructions at <strong>{nomineeDetails.maskedEmail}</strong>.
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         )}
 

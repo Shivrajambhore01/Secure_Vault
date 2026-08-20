@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Users,
   UserPlus,
@@ -63,6 +64,7 @@ const relationships = [
 ]
 
 export default function NomineesPage() {
+  const router = useRouter()
   const [nominees, setNominees] = useState<Nominee[]>([])
   const [assets, setAssets] = useState<DigitalAsset[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -92,6 +94,11 @@ export default function NomineesPage() {
         }
       }
       fetchData()
+
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
+      if (searchParams?.get("returnTo")) {
+        setShowForm(true)
+      }
     }
   }, [])
 
@@ -162,12 +169,27 @@ export default function NomineesPage() {
 
       if (!response.ok) throw new Error("Failed to save nominee")
 
+      // Save latest added nominee ID for auto-selection in asset creation
+      if (!editingId && typeof window !== "undefined") {
+        sessionStorage.setItem("sv_latest_added_nominee_id", nominee.id)
+      }
+
       // Refresh list
       const nomineesRes = await secureFetch(`/nominees/${userId}`)
       setNominees(await nomineesRes.json())
 
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
+      const returnTo = searchParams?.get("returnTo")
+
       toast.success(editingId ? "Nominee updated!" : "Nominee added!")
       resetForm()
+
+      if (returnTo) {
+        toast.info("Returning to asset creation flow...")
+        setTimeout(() => {
+          router.push(returnTo)
+        }, 600)
+      }
     } catch (error) {
       toast.error("Error saving nominee")
     } finally {
@@ -369,20 +391,49 @@ export default function NomineesPage() {
                       <span>Phone Number</span>
                       <span className="font-bold text-foreground">{nominee.phone || "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between border-t border-border/10 pt-3 mt-2">
-                      <span>Verification Status</span>
-                      <StatusBadge status={assigned.length > 0 ? "verified" : "pending"} className="px-2 py-0.5 text-[9px]" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Access Status</span>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Standby Active
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Last Activity</span>
-                      <span className="font-semibold text-foreground">Active 2 hours ago</span>
+                    <div className="flex flex-col gap-2 border-t border-border/10 pt-3 mt-2">
+                      <div className="flex items-center justify-between">
+                        <span>Verification Status</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          nominee.verificationStatus === "APPROVED" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                          nominee.verificationStatus === "REJECTED" ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                          nominee.verificationStatus === "NONE" ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
+                          "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                        }`}>
+                          {nominee.verificationStatus === "NONE" ? "No Claim Submitted" : nominee.verificationStatus?.replace("_", " ")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Transfer Status</span>
+                        <span className={`text-[10px] font-bold ${
+                          nominee.verificationStatus === "APPROVED" ? "text-emerald-500" :
+                          nominee.verificationStatus === "REJECTED" ? "text-red-500" :
+                          nominee.verificationStatus === "NONE" ? "text-slate-400" :
+                          "text-amber-500"
+                        }`}>
+                          {nominee.verificationStatus === "APPROVED" ? "Transferred" :
+                           nominee.verificationStatus === "REJECTED" ? "Rejected" :
+                           nominee.verificationStatus === "NONE" ? "Standby Active" :
+                           "Transfer Initiated"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Access Status</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                          nominee.verificationStatus === "APPROVED" ? "text-emerald-500" : "text-slate-500"
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            nominee.verificationStatus === "APPROVED" ? "bg-emerald-500 animate-pulse" : "bg-slate-600"
+                          }`} />
+                          {nominee.verificationStatus === "APPROVED" ? "Granted (View-Only)" : "Locked / Restricted"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Verification Date</span>
+                        <span className="font-semibold text-foreground">
+                          {nominee.verificationDate ? new Date(nominee.verificationDate).toLocaleDateString() : "Not Started"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -411,7 +462,7 @@ export default function NomineesPage() {
                     onClick={() => setDeleteId(nominee.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Remove
+                    Revoke
                   </Button>
                 </CardFooter>
               </Card>
@@ -446,9 +497,9 @@ export default function NomineesPage() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">Remove Nominee</AlertDialogTitle>
+            <AlertDialogTitle className="text-foreground">Revoke Nominee Access</AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to remove this nominee? Assets assigned to them will become unassigned.
+              Are you sure you want to revoke access and remove this nominee? All digital assets assigned to them will be unassigned and any pending inheritance claims will be cancelled immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -457,7 +508,7 @@ export default function NomineesPage() {
               onClick={() => deleteId && handleDelete(deleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove
+              Revoke Access
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

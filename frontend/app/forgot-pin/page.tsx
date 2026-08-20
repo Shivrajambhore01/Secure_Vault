@@ -91,8 +91,8 @@ export default function ForgotPinPage() {
             toast.error("PINs do not match")
             return
         }
-        if (newPin.length < 4) {
-            toast.error("PIN must be at least 4 digits")
+        if (newPin.length !== 4) {
+            toast.error("PIN must be exactly 4 digits")
             return
         }
 

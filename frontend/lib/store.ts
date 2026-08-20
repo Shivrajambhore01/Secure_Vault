@@ -39,6 +39,9 @@ export interface Nominee {
   phone: string
   relationship: string
   createdAt: string
+  verificationStatus?: string
+  verificationDate?: string
+  verificationRemarks?: string
 }
 
 // Simple ID generator
@@ -139,7 +142,35 @@ export function setLoggedIn(value: boolean): void {
     }
     localStorage.setItem(userKey(userId, "logoutTime"), new Date().toISOString())
     localStorage.removeItem(KEYS.currentUserId)
+    clearPinVerifiedSession()
   }
+}
+
+// Session PIN verification (valid for 15 minutes per session)
+const PIN_SESSION_KEY = "sv_pin_verified_time"
+const PIN_SESSION_TIMEOUT_MS = 15 * 60 * 1000 // 15 minutes
+
+export function isPinVerifiedSession(): boolean {
+  if (typeof window === "undefined") return false
+  const timeStr = sessionStorage.getItem(PIN_SESSION_KEY)
+  if (!timeStr) return false
+  const timestamp = parseInt(timeStr, 10)
+  if (isNaN(timestamp)) return false
+  if (Date.now() - timestamp > PIN_SESSION_TIMEOUT_MS) {
+    sessionStorage.removeItem(PIN_SESSION_KEY)
+    return false
+  }
+  return true
+}
+
+export function setPinVerifiedSession(): void {
+  if (typeof window === "undefined") return
+  sessionStorage.setItem(PIN_SESSION_KEY, Date.now().toString())
+}
+
+export function clearPinVerifiedSession(): void {
+  if (typeof window === "undefined") return
+  sessionStorage.removeItem(PIN_SESSION_KEY)
 }
 
 // Logout time (scoped to current user)
@@ -157,3 +188,4 @@ export function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
+

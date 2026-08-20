@@ -304,11 +304,17 @@ export default function NomineeVaultPage() {
                         </button>
 
                         <div className="grid md:grid-cols-2">
-                            <div className="bg-muted/30 flex items-center justify-center bg-gradient-to-br from-primary/10 to-transparent border-r border-border/50">
+                            <div className="bg-muted/30 flex items-center justify-center bg-gradient-to-br from-primary/10 to-transparent border-r border-border/50 min-h-[350px]">
                                 {viewAsset.type === "image" && viewAsset.filePaths ? (
                                     <img src={getAssetUrl(viewAsset.filePaths)} alt={viewAsset.name} className="h-full w-full object-contain p-4" />
                                 ) : viewAsset.type === "video" && viewAsset.filePaths ? (
                                     <video src={getAssetUrl(viewAsset.filePaths)} controls autoPlay className="h-full w-full object-contain" />
+                                ) : (viewAsset.type === "document" || viewAsset.type === "legal-file") && viewAsset.filePaths ? (
+                                    <iframe
+                                        src={getAssetUrl(viewAsset.filePaths)}
+                                        title={viewAsset.name}
+                                        className="h-full w-full min-h-[350px] w-full border-none rounded-l-xl bg-slate-950/20"
+                                    />
                                 ) : (
                                     <div className="flex flex-col items-center gap-4 py-20">
                                         <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-primary/10 text-primary">
@@ -322,46 +328,51 @@ export default function NomineeVaultPage() {
                                 )}
                             </div>
 
-                            <div className="p-8 flex flex-col gap-6">
-                                <div>
-                                    <h2 className="text-2xl font-extrabold text-foreground leading-tight">{viewAsset.name}</h2>
-                                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-3">
-                                        {viewAsset.description || "No description provided."}
-                                    </p>
-                                </div>
-
-                                {viewAsset.content && (
-                                    <div className="rounded-xl border border-border/50 bg-secondary/30 p-4">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                                            {viewAsset.type === "password" ? "Secure Password" : "Inherited Note"}
-                                        </p>
-                                        <div className="flex items-center justify-between gap-2">
-                                            {viewAsset.type === "password" ? (
-                                                <>
-                                                    <code className="text-sm font-mono text-primary break-all">
-                                                        {showPassword[viewAsset.id] ? viewAsset.content : "••••••••••••••••"}
-                                                    </code>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:bg-primary/5" onClick={() => togglePassword(viewAsset.id)}>
-                                                        {showPassword[viewAsset.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <p className="text-sm text-foreground whitespace-pre-wrap">{viewAsset.content}</p>
+                            <div className="p-8 flex flex-col justify-between gap-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="inline-flex items-center rounded-lg bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-400 border border-emerald-500/20">
+                                                View-Only Access
+                                            </span>
+                                            {viewAsset.filePaths && (
+                                                <span className="inline-flex items-center rounded-lg bg-blue-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-400 border border-blue-500/20">
+                                                    Encrypted Stream
+                                                </span>
                                             )}
                                         </div>
+                                        <h2 className="text-2xl font-extrabold text-foreground leading-tight">{viewAsset.name}</h2>
+                                        <p className="mt-2 text-sm text-muted-foreground leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                                            {viewAsset.description || "No description provided."}
+                                        </p>
                                     </div>
-                                )}
 
-                                <div className="mt-8 grid grid-cols-1 gap-3">
-                                    {viewAsset.filePaths && (
-                                        <Button size="lg" className="w-full gap-2 rounded-xl" asChild>
-                                            <a href={getAssetUrl(viewAsset.filePaths)} download>
-                                                <Download className="h-4 w-4" /> Download Protected Asset
-                                            </a>
-                                        </Button>
+                                    {viewAsset.content && (
+                                        <div className="rounded-xl border border-border/50 bg-secondary/30 p-4">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                                                {viewAsset.type === "password" ? "Secure Password" : "Inherited Note"}
+                                            </p>
+                                            <div className="flex items-center justify-between gap-2">
+                                                {viewAsset.type === "password" ? (
+                                                    <>
+                                                        <code className="text-sm font-mono text-primary break-all">
+                                                            {showPassword[viewAsset.id] ? viewAsset.content : "••••••••••••••••"}
+                                                        </code>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hover:bg-primary/5" onClick={() => togglePassword(viewAsset.id)}>
+                                                            {showPassword[viewAsset.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-sm text-foreground whitespace-pre-wrap">{viewAsset.content}</p>
+                                                )}
+                                            </div>
+                                        </div>
                                     )}
-                                    <Button size="lg" variant="secondary" className="w-full gap-2 rounded-xl" onClick={() => setViewAsset(null)}>
-                                        Complete Review
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    <Button size="lg" className="w-full gap-2 rounded-xl" onClick={() => setViewAsset(null)}>
+                                        Close Preview
                                     </Button>
                                 </div>
                             </div>

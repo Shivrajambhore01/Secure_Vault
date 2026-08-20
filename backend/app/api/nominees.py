@@ -181,9 +181,31 @@ async def nominee_verify_otp(data: NomineeVerifyOTPRequest):
 async def get_nominee_assets(session_token: str):
     nominee = await nominees_col.find_one({"accessToken": session_token})
     if not nominee:
-        raise HTTPException(status_code=401, detail="Session expired")
+        raise HTTPException(status_code=401, detail="Session expired or invalid access token")
 
-    # Strictly fetch only assets assigned to this specific nominee
+    # Check token expiry
+    expiry = nominee.get("tokenExpiry")
+    if expiry:
+        if isinstance(expiry, str):
+            expiry_dt = datetime.fromisoformat(expiry.replace("Z", "+00:00"))
+        else:
+            expiry_dt = expiry
+        if datetime.now(timezone.utc) > expiry_dt:
+            raise HTTPException(status_code=401, detail="Access link has expired")
+
+    # STRICT BACKEND ACCESS ENFORCEMENT:
+    # Nominee can ONLY access assets if their death verification request has been APPROVED by admin
+    verification_req = await db["verification_requests"].find_one({
+        "nomineeId": nominee["id"],
+        "status": "APPROVED"
+    })
+    if not verification_req:
+        raise HTTPException(
+            status_code=403,
+            detail="Access restricted: Your death verification claim has not been approved by compliance yet."
+        )
+
+    # Strictly fetch ONLY assets assigned/transferred to this specific nominee
     assets = await assets_col.find({
         "userId": nominee["userId"],
         "$or": [
@@ -210,7 +232,20 @@ async def get_nominees(user_id: str, current_user: dict = Depends(get_current_us
     nominees = await nominees_col.find({"userId": user_id}).to_list(length=None)
     for n in nominees:
         n["_id"] = str(n["_id"])
+        latest_req = await db["verification_requests"].find_one(
+            {"nomineeId": n["id"]},
+            sort=[("createdAt", -1)]
+        )
+        if latest_req:
+            n["verificationStatus"] = latest_req.get("status", "NONE")
+            n["verificationDate"] = latest_req.get("createdAt")
+            n["verificationRemarks"] = latest_req.get("remarks")
+        else:
+            n["verificationStatus"] = "NONE"
+            n["verificationDate"] = None
+            n["verificationRemarks"] = None
     return nominees
+
 
 
 # ------------------------------------------------------------------
@@ -224,28 +259,61 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
     if not user_id:
         raise HTTPException(status_code=400, detail="UserId is required")
 
+    access_token = secrets.token_urlsafe(32)
+    token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+
     if nominee_id:
         await nominees_col.update_one(
             {"id": nominee_id, "userId": user_id},
             {"$set": {**body, "updatedAt": datetime.now(timezone.utc).isoformat()}},
             upsert=True,
         )
+        return {"message": "Nominee updated successfully"}
     else:
         new_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:]
-        await nominees_col.insert_one({
+        new_nominee = {
             "id": new_id,
             "userId": user_id,
             **body,
+            "accessToken": access_token,
+            "tokenExpiry": token_expiry.isoformat(),
             "createdAt": datetime.now(timezone.utc).isoformat(),
-        })
-
-    return {"message": "Nominee saved successfully"}
+        }
+        await nominees_col.insert_one(new_nominee)
+        return {"message": "Nominee created successfully", "token": access_token}
 
 
 # ------------------------------------------------------------------
-# DELETE a nominee (protected)
+# DELETE a nominee (protected) — Owner revokes nominee access
 # ------------------------------------------------------------------
 @router.delete("/{user_id}/{nominee_id}")
 async def delete_nominee(user_id: str, nominee_id: str, current_user: dict = Depends(get_current_user)):
+    # Delete nominee record
     await nominees_col.delete_one({"id": nominee_id, "userId": user_id})
-    return {"message": "Nominee deleted successfully"}
+
+    # Revoke/cancel any pending or active verification requests associated with this nominee
+    await db["verification_requests"].delete_many({"nomineeId": nominee_id})
+    await db["verification_otps"].delete_many({"nomineeId": nominee_id})
+
+    return {"message": "Nominee access revoked and deleted successfully"}
+
+# ------------------------------------------------------------------
+# GET nominee verification status by token (public)
+# ------------------------------------------------------------------
+@router.get("/status/{token}")
+async def get_nominee_status(token: str):
+    nominee = await nominees_col.find_one({"accessToken": token})
+    if not nominee:
+        raise HTTPException(status_code=404, detail="Nominee not found")
+    # Find latest verification request for this nominee
+    verification = await db["verification_requests"].find_one({
+        "nomineeId": nominee["id"]
+    }, sort=[("createdAt", -1)])
+    if not verification:
+        return {"status": "NONE", "message": "No verification request submitted"}
+    # Strip file data for privacy
+    for key in ("certificateFile", "governmentIdFile", "relationshipProofFile"):
+        if verification.get(key) and isinstance(verification[key], dict):
+            verification[key] = {k: v for k, v in verification[key].items() if k != "data"}
+    verification["_id"] = str(verification["_id"])
+    return {"status": verification.get("status"), "verification": verification, "ownerName": nominee.get("userName", "Account Owner"), "relationship": nominee.get("relationship", "")}
