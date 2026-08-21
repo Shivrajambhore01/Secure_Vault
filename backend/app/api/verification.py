@@ -432,6 +432,20 @@ async def get_verification_detail(
         if v.get(key) and isinstance(v[key], dict):
             v[key] = {k: val for k, val in v[key].items() if k != "data"}
 
+    # Build a dynamic list of ALL submitted documents (metadata only)
+    all_documents = []
+    for doc in db_docs:
+        all_documents.append({
+            "id": doc.get("id"),
+            "documentType": doc.get("documentType", "UNKNOWN"),
+            "fileName": doc.get("fileName", "document"),
+            "mimeType": doc.get("mimeType", "application/octet-stream"),
+            "isPreferred": doc.get("isPreferred", False),
+            "isAdditional": doc.get("isAdditional", False),
+            "idType": doc.get("idType"),
+            "createdAt": doc.get("createdAt"),
+        })
+
     # Fetch audit log / review history
     audit_logs = await verification_audit_col.find(
         {"verificationId": verification_id}
@@ -461,6 +475,7 @@ async def get_verification_detail(
         "reviewer": reviewer,
         "auditLogs": audit_logs,
         "aiVerification": ai_ver_doc,
+        "documents": all_documents,
     }
 
 
