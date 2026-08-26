@@ -33,7 +33,9 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.get("/{user_id}")
 async def get_assets(user_id: str, current_user: dict = Depends(get_current_user)):
     caller_user_id = current_user.get("userId") or current_user.get("id")
-    if caller_user_id and str(caller_user_id) != str(user_id):
+    if user_id == "me" and caller_user_id:
+        user_id = str(caller_user_id)
+    elif caller_user_id and str(caller_user_id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: Cannot access another user's assets")
 
     assets = await assets_col.find({"userId": user_id}, {"fileData": 0}).to_list(length=None)
