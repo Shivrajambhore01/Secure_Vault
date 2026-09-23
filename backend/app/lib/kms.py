@@ -224,3 +224,8 @@ async def get_kms_audit_trail(key_id: str) -> list[dict]:
     """Return the full audit trail for a key."""
     cursor = kms_audit_col.find({"keyId": key_id}, {"_id": 0}).sort("timestamp", 1)
     return await cursor.to_list(length=None)
+
+
+# Backward-compatible alias
+create_data_key = create_vault_dek
+

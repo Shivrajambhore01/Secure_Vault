@@ -335,18 +335,18 @@ export default function SettingsPage() {
   if (!user) return null
 
   return (
-    <div className="mx-auto max-w-5xl flex flex-col gap-6">
+    <div className="mx-auto max-w-5xl flex flex-col gap-8 pb-12 font-tt-norms font-sans text-black">
       <div>
-        <h1 className="text-2xl font-bold text-foreground font-sans">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground font-sans">
-          Manage your profile, security, and inheritance settings.
+        <h1 className="text-3xl sm:text-4xl font-bold text-black tracking-tight">Settings &amp; Security</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Manage your profile, cryptographic keys, dead man switch timeouts, and audit logs.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Side: Sidebar Tabs Navigation */}
-        <div className="md:col-span-3">
-          <div className="md:sticky md:top-24 max-h-[calc(100vh-8rem)] overflow-y-auto flex flex-col gap-1 bg-card border border-border p-3 rounded-2xl shadow-sm">
+        <div className="md:col-span-4 lg:col-span-3">
+          <div className="md:sticky md:top-24 max-h-[calc(100vh-8rem)] overflow-y-auto flex flex-col gap-1.5 bg-white border border-black/8 p-3 rounded-3xl shadow-sm">
             {[
               { id: "overview", label: "Overview", icon: Shield, subtitle: "Security status summary" },
               { id: "profile", label: "Account Profile", icon: User, subtitle: "Personal info & phone" },
@@ -364,16 +364,18 @@ export default function SettingsPage() {
                     setShow2FASetup(false)
                   }}
                   className={cn(
-                    "flex items-center gap-3 w-full text-left p-3 rounded-xl border border-transparent transition-all duration-250",
+                    "flex items-center gap-3 w-full text-left p-3 rounded-2xl border transition-all duration-150 cursor-pointer",
                     isSelected
-                      ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                      ? "bg-black text-white border-transparent shadow-sm"
+                      : "border-transparent text-neutral-600 hover:text-black hover:bg-neutral-100"
                   )}
                 >
-                  <Icon className={cn("h-5 w-5 shrink-0", isSelected ? "text-primary" : "text-muted-foreground")} />
+                  <Icon className={cn("h-4.5 w-4.5 shrink-0", isSelected ? "text-white" : "text-neutral-500")} />
                   <div className="min-w-0">
                     <div className="text-xs font-bold leading-none">{tab.label}</div>
-                    <span className="text-[9px] text-muted-foreground/80 mt-1 block truncate leading-none">{tab.subtitle}</span>
+                    <span className={cn("text-[10px] mt-1 block truncate leading-none", isSelected ? "text-neutral-300" : "text-neutral-400")}>
+                      {tab.subtitle}
+                    </span>
                   </div>
                 </button>
               )
