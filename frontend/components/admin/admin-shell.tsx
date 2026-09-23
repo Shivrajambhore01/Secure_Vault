@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -18,6 +18,12 @@ import {
   Moon,
   UsersRound,
   FileSearch,
+  CreditCard,
+  Bell,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,16 +33,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { getAdminUser, adminIsLoggedIn, setAdminLoggedIn } from "@/lib/admin-store"
 import { secureAdminFetch } from "@/lib/admin-api"
 import { useTheme } from "next-themes"
 
-const adminNavItems = [
+interface AdminNavItem {
+  href: string
+  label: string
+  icon: any
+  role?: string | string[]
+  isPayment?: boolean
+}
+
+const adminNavItems: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/verifications", label: "Verifications", icon: FileSearch, role: ["VERIFICATION_ADMIN", "SUPER_ADMIN"] },
   { href: "/admin/security", label: "Security & Audit", icon: Shield, role: ["SECURITY_ADMIN", "SUPER_ADMIN"] },
   { href: "/admin/support", label: "Support Desk", icon: UsersRound, role: ["SUPPORT_ADMIN", "SUPER_ADMIN"] },
+  { href: "/admin/support/payments", label: "Subscription UPI", icon: CreditCard, role: ["SUPPORT_ADMIN", "SUPER_ADMIN"], isPayment: true },
   { href: "/admin/admins", label: "Admins (RBAC)", icon: Shield, role: "SUPER_ADMIN" },
   { href: "/admin/users", label: "Users Registry", icon: UsersRound, role: "SUPER_ADMIN" },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3, role: "SUPER_ADMIN" },
@@ -52,6 +68,47 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
+  // Live administrative notifications state
+  const [notificationsData, setNotificationsData] = useState<{
+    totalPending: number
+    pendingPaymentsCount: number
+    pendingVerificationsCount: number
+    notifications: any[]
+  }>({
+    totalPending: 0,
+    pendingPaymentsCount: 0,
+    pendingVerificationsCount: 0,
+    notifications: [],
+  })
+
+  const prevPendingCountRef = useRef<number>(0)
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await secureAdminFetch("/notifications")
+      if (res.ok) {
+        const data = await res.json()
+        setNotificationsData(data)
+
+        // Show toast alert if new pending request arrived
+        if (data.totalPending > prevPendingCountRef.current && prevPendingCountRef.current !== 0) {
+          if (data.pendingPaymentsCount > 0) {
+            toast.info("New UPI Payment Request received!", {
+              description: "A user submitted payment proof for verification.",
+              action: {
+                label: "Review Queue",
+                onClick: () => router.push("/admin/support/payments"),
+              },
+            })
+          }
+        }
+        prevPendingCountRef.current = data.totalPending
+      }
+    } catch {
+      // Background poll failure silent
+    }
+  }, [router])
+
   useEffect(() => {
     setMounted(true)
     if (!adminIsLoggedIn()) {
@@ -62,7 +119,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     if (u) {
       setAdmin(u)
     }
-  }, [router])
+
+    // Initial fetch
+    fetchNotifications()
+
+    // Poll for new requests every 12 seconds
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 12000)
+
+    return () => clearInterval(interval)
+  }, [router, fetchNotifications])
 
   const handleLogout = async () => {
     try {
@@ -136,19 +203,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             }
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
             const Icon = item.icon
+
+            const hasPendingBadge = item.isPayment && notificationsData.pendingPaymentsCount > 0
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group ${
+                className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group ${
                   isActive
                     ? "bg-violet-600 text-white shadow-lg shadow-violet-600/15"
                     : "text-muted-foreground hover:bg-violet-500/5 hover:text-violet-400"
                 }`}
               >
-                <Icon className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${isActive ? "text-white" : "text-muted-foreground group-hover:text-violet-400"}`} />
-                {item.label}
+                <div className="flex items-center gap-3.5">
+                  <Icon className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${isActive ? "text-white" : "text-muted-foreground group-hover:text-violet-400"}`} />
+                  <span>{item.label}</span>
+                </div>
+
+                {hasPendingBadge && (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 text-black px-1.5 text-[10px] font-black shadow-md animate-pulse">
+                    {notificationsData.pendingPaymentsCount}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -191,7 +269,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold text-foreground tracking-tight hidden sm:block">
-              {pathname === "/admin/dashboard" ? "Admin Console Overview" : 
+              {pathname.startsWith("/admin/support/payments") ? "Subscription & UPI Payments" :
+               pathname === "/admin/dashboard" ? "Admin Console Overview" : 
                pathname === "/admin/admins" ? "Admins & RBAC Control" : 
                pathname.startsWith("/admin/security") ? "Security & Audit Control" :
                pathname.startsWith("/admin/support") ? "Customer Support Desk" :
@@ -203,7 +282,100 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Live Notifications Bell Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative rounded-full text-muted-foreground hover:bg-violet-500/10 hover:text-violet-400"
+                  aria-label="View Administrative Notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  {notificationsData.totalPending > 0 && (
+                    <span className="absolute 1 top-0.5 right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white shadow-md animate-pulse">
+                      {notificationsData.totalPending}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 sm:w-96 border-border p-0 overflow-hidden shadow-2xl bg-zinc-950">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground">Action Notifications</span>
+                  </div>
+                  {notificationsData.totalPending > 0 ? (
+                    <Badge className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-black uppercase">
+                      {notificationsData.totalPending} Action Required
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground border-white/10">
+                      All Clear
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-white/5">
+                  {notificationsData.notifications.length === 0 ? (
+                    <div className="py-8 text-center px-4">
+                      <CheckCircle2 className="h-8 w-8 text-emerald-500/50 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-foreground">All caught up!</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        No pending payment verification or death claim requests.
+                      </p>
+                    </div>
+                  ) : (
+                    notificationsData.notifications.map((item) => (
+                      <DropdownMenuItem
+                        key={item.id}
+                        asChild
+                        className="p-3.5 focus:bg-white/5 cursor-pointer"
+                      >
+                        <Link href={item.link} className="flex items-start gap-3 w-full">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                            item.type === "PAYMENT_REQUEST"
+                              ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          }`}>
+                            {item.type === "PAYMENT_REQUEST" ? (
+                              <CreditCard className="h-4 w-4" />
+                            ) : (
+                              <Clock className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            <p className="text-xs font-bold text-foreground truncate">
+                              {item.title}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {item.description}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/80 font-mono">
+                              {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 self-center" />
+                        </Link>
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </div>
+
+                {notificationsData.totalPending > 0 && (
+                  <div className="p-2 border-t border-white/10 bg-white/[0.01] text-center">
+                    <Link
+                      href="/admin/support/payments"
+                      className="text-[11px] font-bold text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Open Full Payment Queue <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Theme switcher */}
             <Button
               variant="ghost"

@@ -173,7 +173,19 @@ export default function NomineesPage() {
       const resData = await response.json().catch(() => ({}))
 
       if (!response.ok) {
-        throw new Error(resData.error || resData.detail || "Failed to save nominee")
+        const detail = resData.detail || resData.error || {}
+        if (response.status === 402 || (typeof detail === "object" && detail.error === "upgrade_required")) {
+          const msg = typeof detail === "object" ? detail.message : detail
+          toast.error(msg || "Nominee quota reached on your current plan.", {
+            action: {
+              label: "Upgrade Plan",
+              onClick: () => router.push("/dashboard/pricing"),
+            },
+            duration: 8000,
+          })
+          return
+        }
+        throw new Error(typeof detail === "string" ? detail : detail.message || resData.message || "Failed to save nominee")
       }
 
       const savedId = resData.id || editingId

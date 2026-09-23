@@ -15,6 +15,7 @@ from typing import Optional
 from app.core.database import db
 from app.core.security import get_current_user, decode_token
 from app.lib.encryption import encrypt_bytes, decrypt_bytes
+from app.lib.limit_enforcement import check_storage_limit, check_file_size_limit, check_asset_limit
 
 router = APIRouter()
 
@@ -76,6 +77,10 @@ async def save_asset(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # If creating a new asset, check plan asset count limit
+    if not id:
+        await check_asset_limit(userId, user.get("plan", "free"))
+
     asset_id = id
     if not asset_id:
         import random, string
@@ -94,31 +99,9 @@ async def save_asset(
         file_content = await file.read()
         new_file_size = len(file_content)
 
-        # Type size validation
-        type_limit = float("inf")
-        if type == "image":
-            type_limit = 20 * 1024 * 1024
-        elif type in ("document", "legal-file"):
-            type_limit = 50 * 1024 * 1024
-        elif type == "video":
-            type_limit = 500 * 1024 * 1024
-
-        if new_file_size > type_limit:
-            raise HTTPException(status_code=400, detail=f"Upload exceeds maximum size limit for {type} ({type_limit // (1024 * 1024)}MB).")
-
-        # Storage limit check
-        if (user.get("storageUsed", 0) + new_file_size) > user.get("storageLimit", 500 * 1024 * 1024):
-            raise HTTPException(status_code=403, detail="Storage limit reached. Please upgrade your plan.")
-
-        # File size limit per plan
-        plan = user.get("plan", "free")
-        file_size_limit = (
-            50 * 1024 * 1024 if plan == "free"
-            else 500 * 1024 * 1024 if plan == "pro"
-            else float("inf")
-        )
-        if new_file_size > file_size_limit:
-            raise HTTPException(status_code=403, detail=f"File size exceeds limits for {plan} plan.")
+        # Plan-based storage & file size limit checks (centralized)
+        await check_file_size_limit(user, new_file_size)
+        await check_storage_limit(user, new_file_size)
 
     # Parse nomineeIds / allowedNominees list
     raw_nominee_str = allowedNominees or nomineeIds

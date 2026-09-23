@@ -368,3 +368,62 @@ async def list_platform_users(
         u["nomineeCount"] = await nominees_col.count_documents({"userId": u.get("id") or str(u["_id"])})
 
     return {"users": users, "total": total, "skip": skip, "limit": limit}
+
+
+# ------------------------------------------------------------------
+# GET /notifications — Live administrative notifications
+# ------------------------------------------------------------------
+
+@router.get("/notifications")
+async def get_admin_notifications(current_admin: dict = Depends(get_current_admin)):
+    """Return live administrative notification stream and pending counts."""
+    role = current_admin.get("role", "")
+    notifications = []
+    
+    # 1. Pending payment requests (For Support Admin & Super Admin)
+    pending_payments_count = 0
+    if role in ("SUPPORT_ADMIN", "SUPER_ADMIN"):
+        pending_payments_count = await db["payment_requests"].count_documents({"status": "PENDING"})
+        recent_payments = await db["payment_requests"].find(
+            {"status": "PENDING"},
+            {"screenshotData": 0}
+        ).sort("submittedAt", -1).limit(5).to_list(length=5)
+
+        for p in recent_payments:
+            notifications.append({
+                "id": f"pay_{p.get('id')}",
+                "type": "PAYMENT_REQUEST",
+                "title": f"New ₹{p.get('amount', 0)} UPI Payment ({p.get('planName', 'Plan')})",
+                "description": f"{p.get('userName') or p.get('userEmail')} • UTR: {p.get('utrId')}",
+                "timestamp": p.get("submittedAt"),
+                "link": "/admin/support/payments",
+                "priority": "HIGH",
+            })
+
+    # 2. Pending death verification claims (For Verification Admin & Super Admin)
+    pending_verifications_count = 0
+    if role in ("VERIFICATION_ADMIN", "SUPER_ADMIN"):
+        pending_verifications_count = await db["verification_requests"].count_documents({"status": "PENDING"})
+        recent_verifications = await db["verification_requests"].find(
+            {"status": "PENDING"}
+        ).sort("createdAt", -1).limit(5).to_list(length=5)
+
+        for v in recent_verifications:
+            notifications.append({
+                "id": f"ver_{v.get('id') or str(v.get('_id'))}",
+                "type": "DEATH_VERIFICATION",
+                "title": "Pending Death Claim Verification",
+                "description": f"Claim filed for vault {v.get('userEmail') or 'User'}",
+                "timestamp": v.get("createdAt"),
+                "link": "/admin/verifications",
+                "priority": "URGENT",
+            })
+
+    total_pending = pending_payments_count + pending_verifications_count
+
+    return {
+        "totalPending": total_pending,
+        "pendingPaymentsCount": pending_payments_count,
+        "pendingVerificationsCount": pending_verifications_count,
+        "notifications": notifications,
+    }
