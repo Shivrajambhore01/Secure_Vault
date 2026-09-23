@@ -1,542 +1,833 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
   UserPlus,
-  Pencil,
-  Trash2,
+  Shield,
+  Key,
   Mail,
   Phone,
-  Heart,
-  X,
-  Loader2,
-  CheckCircle,
-  MoreVertical,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+  Share2,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  Copy,
+  Trash2,
+  Sliders,
+  Check,
+  Search,
+  LayoutGrid,
+  List,
+  Clock,
+  ShieldAlert,
+  Percent,
+} from "lucide-react";
 import {
+  Button,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { StatusBadge } from "@/components/ui/status-badge"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { toast } from "sonner"
-import {
-  generateId,
-  getCurrentUserId,
-  getUser,
-} from "@/lib/store"
-import { secureFetch } from "@/lib/api"
-import type { Nominee, DigitalAsset, User } from "@/lib/store"
+  Modal,
+  Drawer,
+  DataTable,
+  StatusBadge,
+  MetricCard,
+  EmptyState,
+  LoadingState,
+  ConfirmDialog,
+} from "@/components/design-system";
+import { secureFetch, extractErrorMessage, API_BASE } from "@/lib/api";
+import { toast } from "sonner";
 
-const relationships = [
-  "Spouse",
-  "Parent",
-  "Child",
-  "Sibling",
-  "Friend",
-  "Lawyer",
-  "Business Partner",
-  "Other",
-]
+interface AllocationItem {
+  assetId: string;
+  sharePercentage: number;
+  releaseCondition: string;
+}
+
+interface Nominee {
+  id: string;
+  name: string;
+  email: string;
+  relationship: string;
+  phone?: string;
+  tier: "PRIMARY" | "CONTINGENT" | "EXECUTOR" | "GUARDIAN";
+  status: "INVITED" | "ACCEPTED" | "VERIFIED" | "REJECTED" | "REVOKED";
+  invitationToken?: string;
+  allocatedAssetCount?: number;
+  assetAllocations?: AllocationItem[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AllocationMatrix {
+  total_nominees: number;
+  total_assets: number;
+  covered_assets: number;
+  unallocated_assets_count: number;
+  coverage_percentage: number;
+  nominees: any[];
+  assets: any[];
+}
+
+interface VaultAsset {
+  id: string;
+  name: string;
+  type: string;
+  sensitivity?: string;
+}
+
+const RELATIONSHIPS = [
+  { value: "Spouse", label: "Spouse / Partner" },
+  { value: "Child", label: "Child / Dependent" },
+  { value: "Parent", label: "Parent / Elder" },
+  { value: "Sibling", label: "Sibling" },
+  { value: "Attorney", label: "Attorney / Legal Counsel" },
+  { value: "Trustee", label: "Trustee / Fiduciary" },
+  { value: "Business Partner", label: "Business Partner" },
+  { value: "Friend", label: "Friend" },
+  { value: "Other", label: "Other" },
+];
+
+const TIERS = [
+  { value: "ALL", label: "All Tiers" },
+  { value: "PRIMARY", label: "Primary Heir" },
+  { value: "CONTINGENT", label: "Contingent (Fallback)" },
+  { value: "EXECUTOR", label: "Executor / Guardian" },
+];
 
 export default function NomineesPage() {
-  const router = useRouter()
-  const [nominees, setNominees] = useState<Nominee[]>([])
-  const [assets, setAssets] = useState<DigitalAsset[]>([])
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [selectedTier, setSelectedTier] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Form fields
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [relationship, setRelationship] = useState("")
+  // Nominees and Matrix Data
+  const [nominees, setNominees] = useState<Nominee[]>([]);
+  const [matrix, setMatrix] = useState<AllocationMatrix | null>(null);
+  const [vaultAssets, setVaultAssets] = useState<VaultAsset[]>([]);
+
+  // Create / Edit Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingNominee, setEditingNominee] = useState<Nominee | null>(null);
+  const [nomineeName, setNomineeName] = useState("");
+  const [nomineeEmail, setNomineeEmail] = useState("");
+  const [nomineeRelationship, setNomineeRelationship] = useState("Spouse");
+  const [nomineePhone, setNomineePhone] = useState("");
+  const [nomineeTier, setNomineeTier] = useState<string>("PRIMARY");
+  const [nomineeNotes, setNomineeNotes] = useState("");
+  const [savingNominee, setSavingNominee] = useState(false);
+
+  // Allocation Drawer
+  const [allocationDrawerOpen, setAllocationDrawerOpen] = useState(false);
+  const [selectedNominee, setSelectedNominee] = useState<Nominee | null>(null);
+  const [currentAllocations, setCurrentAllocations] = useState<AllocationItem[]>([]);
+  const [savingAllocations, setSavingAllocations] = useState(false);
+
+  // Revoke Dialog
+  const [revokeTarget, setRevokeTarget] = useState<Nominee | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
+  // Delete Dialog
+  const [deleteTarget, setDeleteTarget] = useState<Nominee | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const userId = getCurrentUserId() || "me"
-    const fetchData = async () => {
-      try {
-        const [nomineesRes, assetsRes] = await Promise.all([
-          secureFetch(`/nominees/${userId}`),
-          secureFetch(`/assets/${userId}`)
-        ])
-        if (nomineesRes.ok) setNominees(await nomineesRes.json())
-        if (assetsRes.ok) setAssets(await assetsRes.json())
-      } catch (error) {
-        toast.error("Failed to fetch data")
-      }
-    }
-    fetchData()
+    fetchNomineesAndMatrix();
+  }, [selectedTier]);
 
-    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
-    if (searchParams?.get("returnTo")) {
-      setShowForm(true)
-    }
-  }, [])
-
-  const resetForm = () => {
-    setName("")
-    setEmail("")
-    setPhone("")
-    setRelationship("")
-    setEditingId(null)
-    setShowForm(false)
-  }
-
-  const handleEdit = (nominee: Nominee) => {
-    setName(nominee.name)
-    setEmail(nominee.email)
-    setPhone(nominee.phone || "")
-    setRelationship(nominee.relationship)
-    setEditingId(nominee.id)
-    setShowForm(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) {
-      toast.error("Please enter nominee's full name")
-      return
-    }
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email.trim())) {
-      toast.error("Please enter a valid email address")
-      return
-    }
-    if (!relationship) {
-      toast.error("Please select a relationship")
-      return
-    }
-
-    // Check if nominee email matches the logged-in user's email
-    const currentUser = getUser()
-    if (currentUser && email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
-      toast.error("Nominee email cannot be the same as your own email")
-      return
-    }
-
-    // Check if nominee email already exists (exclude current editing nominee)
-    const existingNominee = nominees.find(
-      (n) => n.email.toLowerCase().trim() === email.toLowerCase().trim() && n.id !== editingId
-    )
-    if (existingNominee) {
-      toast.error(`This email is already assigned to nominee "${existingNominee.name}"`)
-      return
-    }
-
-    setLoading(true)
-    const userId = getCurrentUserId() || "me"
-
+  const fetchNomineesAndMatrix = async () => {
+    setLoading(true);
     try {
-      const nomineePayload: any = {
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        relationship,
-        userId: userId !== "me" ? userId : undefined,
+      // 1. List nominees
+      let url = "/v1/nominees";
+      if (selectedTier !== "ALL") url += `?tier=${selectedTier}`;
+      const res = await secureFetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        setNominees(json.data || []);
       }
 
-      if (editingId) {
-        nomineePayload.id = editingId
+      // 2. Allocation matrix
+      const matRes = await secureFetch("/v1/nominees/matrix");
+      if (matRes.ok) {
+        const matJson = await matRes.json();
+        setMatrix(matJson.data);
       }
 
-      const response = await secureFetch("/nominees", {
-        method: "POST",
-        body: JSON.stringify(nomineePayload),
-      })
-
-      const resData = await response.json().catch(() => ({}))
-
-      if (!response.ok) {
-        const detail = resData.detail || resData.error || {}
-        if (response.status === 402 || (typeof detail === "object" && detail.error === "upgrade_required")) {
-          const msg = typeof detail === "object" ? detail.message : detail
-          toast.error(msg || "Nominee quota reached on your current plan.", {
-            action: {
-              label: "Upgrade Plan",
-              onClick: () => router.push("/dashboard/pricing"),
-            },
-            duration: 8000,
-          })
-          return
-        }
-        throw new Error(typeof detail === "string" ? detail : detail.message || resData.message || "Failed to save nominee")
+      // 3. Vault assets for allocation drawer
+      const assetsRes = await secureFetch("/v1/assets?page=1&page_size=200");
+      if (assetsRes.ok) {
+        const assetsJson = await assetsRes.json();
+        setVaultAssets(assetsJson.data || []);
       }
-
-      const savedId = resData.id || editingId
-
-      // Save latest added nominee ID for auto-selection in asset creation
-      if (!editingId && savedId && typeof window !== "undefined") {
-        sessionStorage.setItem("sv_latest_added_nominee_id", savedId)
-      }
-
-      // Refresh list
-      const nomineesRes = await secureFetch(`/nominees/${userId}`)
-      if (nomineesRes.ok) {
-        setNominees(await nomineesRes.json())
-      }
-
-      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
-      const returnTo = searchParams?.get("returnTo")
-
-      toast.success(editingId ? "Nominee updated!" : "Nominee added!")
-      resetForm()
-
-      if (returnTo) {
-        toast.info("Returning to asset creation flow...")
-        setTimeout(() => {
-          router.push(returnTo)
-        }, 600)
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Error saving nominee")
+    } catch {
+      toast.error("Failed to load beneficiaries");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleDelete = async (id: string) => {
-    const userId = getCurrentUserId() || "me"
+  const handleOpenAddModal = () => {
+    setEditingNominee(null);
+    setNomineeName("");
+    setNomineeEmail("");
+    setNomineeRelationship("Spouse");
+    setNomineePhone("");
+    setNomineeTier("PRIMARY");
+    setNomineeNotes("");
+    setModalOpen(true);
+  };
+
+  const handleOpenEditModal = (nom: Nominee) => {
+    setEditingNominee(nom);
+    setNomineeName(nom.name);
+    setNomineeEmail(nom.email);
+    setNomineeRelationship(nom.relationship);
+    setNomineePhone(nom.phone || "");
+    setNomineeTier(nom.tier);
+    setNomineeNotes(nom.notes || "");
+    setModalOpen(true);
+  };
+
+  const handleSaveNominee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nomineeName.trim() || !nomineeEmail.trim()) {
+      toast.error("Name and Email are required");
+      return;
+    }
+
+    setSavingNominee(true);
     try {
-      const response = await secureFetch(`/nominees/${userId}/${id}`, {
-        method: "DELETE"
-      })
-      if (!response.ok) throw new Error("Failed to delete nominee")
+      const payload = {
+        id: editingNominee ? editingNominee.id : undefined,
+        name: nomineeName.trim(),
+        email: nomineeEmail.trim(),
+        relationship: nomineeRelationship,
+        phone: nomineePhone.trim() || undefined,
+        tier: nomineeTier,
+        notes: nomineeNotes.trim() || undefined,
+      };
 
-      setNominees(nominees.filter(n => n.id !== id))
-      setDeleteId(null)
-      toast.success("Nominee removed")
-    } catch (error) {
-      toast.error("Error removing nominee")
+      const res = await secureFetch("/v1/nominees", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(extractErrorMessage(json, "Failed to save nominee"));
+
+      toast.success(editingNominee ? "Nominee updated" : "Nominee enrolled & invitation issued");
+      setModalOpen(false);
+      fetchNomineesAndMatrix();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingNominee(false);
     }
-  }
+  };
 
-  const getAssignedAssets = (nomineeId: string) =>
-    assets.filter((a) => {
-      const ids = a.nomineeIds || (a.nomineeId ? [a.nomineeId] : [])
-      return ids.includes(nomineeId)
-    })
+  const handleResendInvite = async (nomineeId: string) => {
+    try {
+      const res = await secureFetch(`/v1/nominees/${nomineeId}/invite`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(extractErrorMessage(json, "Failed to resend invite"));
+
+      toast.success("New invitation token generated");
+      fetchNomineesAndMatrix();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleCopyInviteLink = (token?: string) => {
+    if (!token) {
+      toast.error("No active invitation token for this beneficiary");
+      return;
+    }
+    const fullUrl = `${window.location.origin}/nominee/invite/${token}`;
+    navigator.clipboard.writeText(fullUrl);
+    toast.success("Invitation link copied to clipboard");
+  };
+
+  // Open Allocation Drawer
+  const handleOpenAllocations = (nom: Nominee) => {
+    setSelectedNominee(nom);
+    setCurrentAllocations(nom.assetAllocations || []);
+    setAllocationDrawerOpen(true);
+  };
+
+  const toggleAssetAllocation = (assetId: string) => {
+    setCurrentAllocations((prev) => {
+      const exists = prev.find((a) => a.assetId === assetId);
+      if (exists) {
+        return prev.filter((a) => a.assetId !== assetId);
+      } else {
+        return [
+          ...prev,
+          { assetId, sharePercentage: 100.0, releaseCondition: "IMMEDIATE_ON_CLAIM" },
+        ];
+      }
+    });
+  };
+
+  const updateAssetShare = (assetId: string, share: number) => {
+    setCurrentAllocations((prev) =>
+      prev.map((a) => (a.assetId === assetId ? { ...a, sharePercentage: share } : a))
+    );
+  };
+
+  const updateAssetCondition = (assetId: string, condition: string) => {
+    setCurrentAllocations((prev) =>
+      prev.map((a) => (a.assetId === assetId ? { ...a, releaseCondition: condition } : a))
+    );
+  };
+
+  const handleSaveAllocations = async () => {
+    if (!selectedNominee) return;
+    setSavingAllocations(true);
+    try {
+      const res = await secureFetch(`/v1/nominees/${selectedNominee.id}/allocations`, {
+        method: "POST",
+        body: JSON.stringify({ allocations: currentAllocations }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(extractErrorMessage(json, "Failed to update allocations"));
+
+      toast.success("Asset allocation matrix synchronized");
+      setAllocationDrawerOpen(false);
+      fetchNomineesAndMatrix();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSavingAllocations(false);
+    }
+  };
+
+  const handleRevokeNominee = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
+    try {
+      const res = await secureFetch(`/v1/nominees/${revokeTarget.id}/revoke`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "Revoked from Beneficiary Command Center" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(extractErrorMessage(json, "Revoke failed"));
+
+      toast.success("Beneficiary entitlement revoked and unlinked from assets");
+      setRevokeTarget(null);
+      fetchNomineesAndMatrix();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const handleDeleteNominee = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await secureFetch(`/v1/nominees/${deleteTarget.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove nominee");
+
+      toast.success("Beneficiary removed");
+      setDeleteTarget(null);
+      fetchNomineesAndMatrix();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const filteredNominees = useMemo(() => {
+    if (!searchQuery.trim()) return nominees;
+    const q = searchQuery.toLowerCase();
+    return nominees.filter(
+      (n) =>
+        (n?.name || "").toLowerCase().includes(q) ||
+        (n?.email || "").toLowerCase().includes(q) ||
+        (n?.relationship || "").toLowerCase().includes(q)
+    );
+  }, [nominees, searchQuery]);
+
+  const primaryCount = useMemo(() => nominees.filter((n) => n.tier === "PRIMARY").length, [nominees]);
+  const contingentCount = useMemo(() => nominees.filter((n) => n.tier === "CONTINGENT").length, [nominees]);
+
+  const tableColumns = [
+    {
+      header: "Beneficiary",
+      accessorKey: "name",
+      cell: (n: Nominee) => (
+        <div>
+          <div className="font-semibold text-black">{n?.name || "Unnamed"}</div>
+          <div className="text-xs text-neutral-500">{n?.email || "No email"}</div>
+        </div>
+      ),
+    },
+    {
+      header: "Relationship",
+      accessorKey: "relationship",
+      cell: (n: Nominee) => (
+        <span className="px-2.5 py-0.5 rounded-full text-xs bg-neutral-100 border border-black/5 text-neutral-700 font-medium">
+          {n?.relationship || "Beneficiary"}
+        </span>
+      ),
+    },
+    {
+      header: "Tier",
+      accessorKey: "tier",
+      cell: (n: Nominee) => (
+        <span
+          className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+            n?.tier === "PRIMARY"
+              ? "bg-black text-white"
+              : "bg-neutral-100 text-neutral-800 border border-black/10"
+          }`}
+        >
+          {n?.tier || "PRIMARY"}
+        </span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status",
+      cell: (n: Nominee) => <StatusBadge status={n?.status || "Active"} />,
+    },
+    {
+      header: "Allocated Assets",
+      accessorKey: "allocatedAssetCount",
+      cell: (n: Nominee) => (
+        <span className="text-xs text-neutral-600 font-mono font-medium">
+          {n?.allocatedAssetCount || 0} Assets
+        </span>
+      ),
+    },
+    {
+      header: "Actions",
+      accessorKey: "id",
+      cell: (n: Nominee) => (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => handleOpenAllocations(n)}>
+            <Sliders className="w-3.5 h-3.5 mr-1" /> Allocations
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => handleOpenEditModal(n)}>
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-red-400 hover:text-red-300"
+            onClick={() => setRevokeTarget(n)}
+          >
+            Revoke
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Nominees</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage your trusted nominees who will receive your digital assets.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            resetForm()
-            setShowForm(true)
-          }}
-          className="gap-2 bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add Nominee
-        </Button>
-      </div>
+    <div className="font-tt-norms font-sans text-black space-y-8 pb-12">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/8 pb-6">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-neutral-100 border border-black/5 text-black flex items-center justify-center shadow-2xs">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-black tracking-tight">Beneficiary Command Center</h1>
+              <p className="text-sm text-neutral-500">
+                Designate primary &amp; contingent heirs, distribute asset shares, and track onboarding acceptance.
+              </p>
+            </div>
+          </div>
 
-      {/* Add/Edit Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">
-                {editingId ? "Edit Nominee" : "Add Nominee"}
-              </h2>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center p-1 rounded-full bg-neutral-100 border border-black/8 shadow-2xs">
               <button
-                type="button"
-                onClick={resetForm}
-                className="text-muted-foreground hover:text-foreground cursor-pointer p-1 rounded-lg hover:bg-secondary/40 transition-colors"
-                aria-label="Close"
+                onClick={() => setViewMode("grid")}
+                className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === "grid" ? "bg-black text-white shadow-2xs" : "text-neutral-600 hover:text-black"
+                }`}
               >
-                <X className="h-5 w-5" />
+                <LayoutGrid className="w-3.5 h-3.5" /> Grid
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  viewMode === "table" ? "bg-black text-white shadow-2xs" : "text-neutral-600 hover:text-black"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" /> Table
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label className="text-foreground font-medium">Full Name <span className="text-destructive">*</span></Label>
-                <Input
-                  placeholder="Nominee's full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-input border-border text-foreground focus-visible:ring-primary"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-foreground font-medium">Email <span className="text-destructive">*</span></Label>
-                <Input
-                  type="email"
-                  placeholder="nominee@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-input border-border text-foreground focus-visible:ring-primary"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-foreground font-medium">Phone Number</Label>
-                <Input
-                  placeholder="+91 9876543210 (optional)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="bg-input border-border text-foreground focus-visible:ring-primary"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-foreground font-medium">Relationship <span className="text-destructive">*</span></Label>
-                <Select value={relationship} onValueChange={setRelationship}>
-                  <SelectTrigger className="bg-input border-border text-foreground w-full">
-                    <SelectValue placeholder="Select relationship" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border z-[60]">
-                    {relationships.map((r) => (
-                      <SelectItem key={r} value={r} className="text-foreground cursor-pointer hover:bg-secondary/40">
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 border-border text-foreground cursor-pointer hover:bg-secondary/40"
-                  onClick={resetForm}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 gap-2 bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : editingId ? (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      Update Nominee
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      Add Nominee
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
+            <Button variant="primary" onClick={handleOpenAddModal}>
+              <UserPlus className="w-4 h-4 mr-1.5" /> Add Beneficiary
+            </Button>
           </div>
         </div>
-      )}
 
-      {/* Nominee List */}
-      {nominees.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {nominees.map((nominee) => {
-            const assigned = getAssignedAssets(nominee.id)
-            return (
-              <Card
-                key={nominee.id}
-                className="group flex flex-col justify-between"
-              >
-                {/* Header: Profile Avatar, Nominee Name, Relationship badge, actions menu */}
-                <CardHeader className="flex items-center justify-between border-b border-border/10">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-[13px] font-black text-primary border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                      {nominee.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </div>
-                    <div className="min-w-0">
-                      <CardTitle className="text-base font-bold truncate max-w-[140px] group-hover:text-primary transition-colors">{nominee.name}</CardTitle>
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider block mt-0.5">{nominee.relationship}</span>
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-transparent hover:border-border/50 text-muted-foreground hover:text-foreground">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-card border-border">
-                      <DropdownMenuItem onClick={() => handleEdit(nominee)} className="gap-2 cursor-pointer">
-                        <Pencil className="h-4 w-4 text-primary" /> Edit Nominee
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setDeleteId(nominee.id)} className="gap-2 cursor-pointer text-destructive">
-                        <Trash2 className="h-4 w-4" /> Remove Nominee
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardHeader>
-
-                {/* Body Content */}
-                <CardContent className="flex flex-col gap-4 py-5 flex-grow text-xs leading-relaxed text-muted-foreground">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span>Email Address</span>
-                      <span className="font-bold text-foreground truncate max-w-[170px]" title={nominee.email}>{nominee.email}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Phone Number</span>
-                      <span className="font-bold text-foreground">{nominee.phone || "—"}</span>
-                    </div>
-                    <div className="flex flex-col gap-2 border-t border-border/10 pt-3 mt-2">
-                      <div className="flex items-center justify-between">
-                        <span>Verification Status</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          nominee.verificationStatus === "APPROVED" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                          nominee.verificationStatus === "REJECTED" ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                          nominee.verificationStatus === "NONE" ? "bg-slate-500/10 text-slate-400 border-slate-500/20" :
-                          "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                        }`}>
-                          {nominee.verificationStatus === "NONE" ? "No Claim Submitted" : nominee.verificationStatus?.replace("_", " ")}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Transfer Status</span>
-                        <span className={`text-[10px] font-bold ${
-                          nominee.verificationStatus === "APPROVED" ? "text-emerald-500" :
-                          nominee.verificationStatus === "REJECTED" ? "text-red-500" :
-                          nominee.verificationStatus === "NONE" ? "text-slate-400" :
-                          "text-amber-500"
-                        }`}>
-                          {nominee.verificationStatus === "APPROVED" ? "Transferred" :
-                           nominee.verificationStatus === "REJECTED" ? "Rejected" :
-                           nominee.verificationStatus === "NONE" ? "Standby Active" :
-                           "Transfer Initiated"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Access Status</span>
-                        <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                          nominee.verificationStatus === "APPROVED" ? "text-emerald-500" : "text-slate-500"
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            nominee.verificationStatus === "APPROVED" ? "bg-emerald-500 animate-pulse" : "bg-slate-600"
-                          }`} />
-                          {nominee.verificationStatus === "APPROVED" ? "Granted (View-Only)" : "Locked / Restricted"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Verification Date</span>
-                        <span className="font-semibold text-foreground">
-                          {nominee.verificationDate ? new Date(nominee.verificationDate).toLocaleDateString() : "Not Started"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Assets assigned */}
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground border-t border-border/10 pt-3.5 mt-auto">
-                    <Heart className="h-3.5 w-3.5 text-primary fill-primary/10 animate-pulse" />
-                    <span>{assigned.length} asset{assigned.length !== 1 ? "s" : ""} assigned</span>
-                  </div>
-                </CardContent>
-
-                {/* Footer Controls */}
-                <CardFooter className="flex gap-2 border-t border-border/10 py-3 bg-secondary/5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-transparent hover:border-border/30 rounded-xl"
-                    onClick={() => handleEdit(nominee)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="flex-1 gap-1.5 text-xs text-muted-foreground hover:text-destructive border border-transparent hover:border-border/30 rounded-xl"
-                    onClick={() => setDeleteId(nominee.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Revoke
-                  </Button>
-                </CardFooter>
-              </Card>
-            )
-          })}
+        {/* KPI Metrics */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            title="Total Beneficiaries"
+            value={nominees.length}
+            subtitle="Designated inheritance nominees"
+            icon={<Users className="w-5 h-5 text-purple-400" />}
+          />
+          <MetricCard
+            title="Primary Heirs"
+            value={primaryCount}
+            subtitle={`${contingentCount} Contingent (backup) heirs`}
+            icon={<Shield className="w-5 h-5 text-emerald-400" />}
+          />
+          <MetricCard
+            title="Asset Coverage"
+            value={`${matrix ? matrix.coverage_percentage : 0}%`}
+            subtitle={`${matrix ? matrix.covered_assets : 0} of ${matrix ? matrix.total_assets : 0} assets allocated`}
+            icon={<Percent className="w-5 h-5 text-blue-400" />}
+          />
+          <MetricCard
+            title="Unallocated Items"
+            value={matrix ? matrix.unallocated_assets_count : 0}
+            subtitle="Assets without designated nominee"
+            icon={<AlertTriangle className="w-5 h-5 text-amber-400" />}
+          />
         </div>
-      ) : (
-        <div className="flex h-96 flex-col items-center justify-center gap-6 rounded-[20px] border border-dashed border-border/60 bg-glass backdrop-blur-md p-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700 max-w-xl mx-auto shadow-sm">
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/5 border border-primary/10">
-            <Users className="h-10 w-10 text-primary animate-pulse" />
-            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white shadow-md shadow-indigo-500/20">
-              <UserPlus className="h-3.5 w-3.5" />
+
+        {/* Filter Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="w-full md:w-80">
+            <Input
+              placeholder="Search by name, email, relationship..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftIcon={<Search className="w-4 h-4 text-neutral-500" />}
+            />
+          </div>
+
+          <div className="w-full md:w-56">
+            <Select
+              value={selectedTier}
+              onChange={(e) => setSelectedTier(e.target.value)}
+              options={TIERS}
+            />
+          </div>
+        </div>
+
+        {/* Nominees Content */}
+        {loading ? (
+          <div className="py-20 flex justify-center">
+            <LoadingState variant="card" label="Loading Beneficiaries & Allocation Matrix..." />
+          </div>
+        ) : filteredNominees.length === 0 ? (
+          <EmptyState
+            icon={<Users className="w-12 h-12 text-purple-500/50" />}
+            title="No Beneficiaries Found"
+            description="Add primary and contingent heirs to ensure your digital vault assets are securely transferred according to your legacy plan."
+            actionLabel="Add Beneficiary"
+            onAction={handleOpenAddModal}
+          />
+        ) : viewMode === "grid" ? (
+          /* Grid View */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredNominees.map((nom) => (
+              <div
+                key={nom.id}
+                className="bg-white border border-black/8 hover:border-black/15 rounded-3xl p-6 space-y-4 shadow-sm transition-all text-black"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-neutral-100 text-black border border-black/8 font-bold text-sm flex items-center justify-center shadow-2xs">
+                      {(nom?.name || "UN").slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-black line-clamp-1">{nom?.name || "Unnamed Beneficiary"}</h3>
+                      <div className="text-xs text-neutral-500 font-medium mt-0.5">{nom?.relationship || "Beneficiary"}</div>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      nom?.tier === "PRIMARY"
+                        ? "bg-black text-white"
+                        : "bg-neutral-100 text-neutral-800 border border-black/10"
+                    }`}
+                  >
+                    {nom?.tier || "PRIMARY"}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs text-neutral-600 border-t border-b border-black/5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-neutral-400" />
+                    <span className="truncate">{nom?.email || "No email"}</span>
+                  </div>
+                  {nom?.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-neutral-400" />
+                      <span>{nom.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-neutral-500 font-mono">
+                      {nom?.allocatedAssetCount || 0} Assets Allocated
+                    </span>
+                    <StatusBadge status={nom?.status || "Active"} />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleOpenAllocations(nom)}
+                  >
+                    <Sliders className="w-3.5 h-3.5 mr-1" /> Allocations
+                  </Button>
+
+                  <div className="flex items-center gap-1.5">
+                    {nom.invitationToken && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Copy Invitation Link"
+                        onClick={() => handleCopyInviteLink(nom.invitationToken)}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Resend Invitation"
+                      onClick={() => handleResendInvite(nom.id)}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-400 hover:text-red-300"
+                      title="Revoke Entitlement"
+                      onClick={() => setRevokeTarget(nom)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Table View */
+          <div className="bg-white border border-black/8 rounded-2xl overflow-hidden shadow-sm">
+            <DataTable data={filteredNominees} columns={tableColumns} pageSize={15} />
+          </div>
+        )}
+
+        {/* Add / Edit Nominee Modal */}
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={editingNominee ? "Edit Beneficiary Profile" : "Enroll New Beneficiary"}
+          description="Designate relationship tier and contact coordinates. A secure invitation token will be generated."
+          maxWidth="md"
+        >
+          <form onSubmit={handleSaveNominee} className="space-y-4">
+            <Input
+              label="Full Legal Name *"
+              placeholder="e.g. Eleanor Vance"
+              value={nomineeName}
+              onChange={(e) => setNomineeName(e.target.value)}
+              required
+            />
+
+            <Input
+              type="email"
+              label="Email Address *"
+              placeholder="e.g. eleanor@family.org"
+              value={nomineeEmail}
+              onChange={(e) => setNomineeEmail(e.target.value)}
+              required
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Relationship Tier"
+                value={nomineeTier}
+                onChange={(e) => setNomineeTier(e.target.value)}
+                options={[
+                  { value: "PRIMARY", label: "Primary Heir" },
+                  { value: "CONTINGENT", label: "Contingent (Backup)" },
+                  { value: "EXECUTOR", label: "Executor / Legal Counsel" },
+                  { value: "GUARDIAN", label: "Guardian" },
+                ]}
+              />
+
+              <Select
+                label="Relationship"
+                value={nomineeRelationship}
+                onChange={(e) => setNomineeRelationship(e.target.value)}
+                options={RELATIONSHIPS}
+              />
+            </div>
+
+            <Input
+              label="Phone Number (SMS OTP Verification)"
+              placeholder="+1 555 123 4567"
+              value={nomineePhone}
+              onChange={(e) => setNomineePhone(e.target.value)}
+            />
+
+            <Input
+              label="Personal Directives & Notes"
+              placeholder="Instructions or reference to family trust..."
+              value={nomineeNotes}
+              onChange={(e) => setNomineeNotes(e.target.value)}
+            />
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-black/8">
+              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={savingNominee}>
+                {editingNominee ? "Save Changes" : "Enroll & Issue Token"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Asset Allocation Drawer */}
+        <Drawer
+          isOpen={allocationDrawerOpen}
+          onClose={() => setAllocationDrawerOpen(false)}
+          title={`Asset Allocations: ${selectedNominee?.name || ""}`}
+          width="lg"
+        >
+          <div className="space-y-5">
+            <div className="bg-neutral-50 p-3.5 rounded-xl border border-black/8 text-xs text-neutral-600">
+              Select which vault assets are assigned to <strong className="text-black font-semibold">{selectedNominee?.name}</strong>, their percentage share, and release triggers.
+            </div>
+
+            <div className="space-y-3">
+              {vaultAssets.length === 0 ? (
+                <div className="text-center py-10 text-xs text-neutral-400">
+                  No assets in vault. Add assets first in the Vault Explorer.
+                </div>
+              ) : (
+                vaultAssets.map((asset) => {
+                  const alloc = currentAllocations.find((a) => a.assetId === asset.id);
+                  const isAssigned = !!alloc;
+
+                  return (
+                    <div
+                      key={asset.id}
+                      className={`p-3.5 rounded-xl border transition-all ${
+                        isAssigned
+                          ? "bg-neutral-100 border-black/20"
+                          : "bg-white border-black/8 hover:border-black/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={() => toggleAssetAllocation(asset.id)}
+                            className="w-4 h-4 rounded border-neutral-300 text-black focus:ring-black"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-black">{asset.name}</div>
+                            <div className="text-[11px] text-neutral-500 font-mono">{asset.type}</div>
+                          </div>
+                        </div>
+
+                        {isAssigned && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-black font-mono font-bold">
+                              {alloc?.sharePercentage || 100}% Share
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {isAssigned && (
+                        <div className="mt-3 pt-3 border-t border-black/10 grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] text-neutral-500 block mb-1">Share Percentage</label>
+                            <input
+                              type="number"
+                              min={1}
+                              max={100}
+                              value={alloc?.sharePercentage || 100}
+                              onChange={(e) => updateAssetShare(asset.id, parseFloat(e.target.value) || 100)}
+                              className="w-full bg-white border border-black/15 rounded-lg p-1.5 text-xs text-black font-mono focus:border-black focus:outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-neutral-500 block mb-1">Release Condition</label>
+                            <select
+                              value={alloc?.releaseCondition || "IMMEDIATE_ON_CLAIM"}
+                              onChange={(e) => updateAssetCondition(asset.id, e.target.value)}
+                              className="w-full bg-white border border-black/15 rounded-lg p-1.5 text-xs text-black focus:border-black focus:outline-none"
+                            >
+                              <option value="IMMEDIATE_ON_CLAIM">Immediate On Claim</option>
+                              <option value="AFTER_COOLING_PERIOD">After Cooling Period</option>
+                              <option value="DUAL_APPROVAL_REQUIRED">Dual Approval Required</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-black/8">
+              <Button variant="ghost" onClick={() => setAllocationDrawerOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                isLoading={savingAllocations}
+                onClick={handleSaveAllocations}
+              >
+                Save Allocations
+              </Button>
             </div>
           </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold text-foreground">No Nominees Yet</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-              Define the heirs to your digital legacy. Add trusted nominees who can securely request contingency check decryptions.
-            </p>
-          </div>
-          <Button
-            size="lg"
-            className="rounded-xl bg-primary text-primary-foreground font-semibold px-8 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            onClick={() => setShowForm(true)}
-          >
-            Add Your First Nominee
-          </Button>
-        </div>
-      )}
+        </Drawer>
 
-      {/* Delete confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">Revoke Nominee Access</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to revoke access and remove this nominee? All digital assets assigned to them will be unassigned and any pending inheritance claims will be cancelled immediately.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-border text-foreground">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && handleDelete(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Revoke Access
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Revoke Confirmation */}
+        <ConfirmDialog
+          isOpen={!!revokeTarget}
+          onClose={() => setRevokeTarget(null)}
+          onConfirm={handleRevokeNominee}
+          title={`Revoke Rights for ${revokeTarget?.name}?`}
+          description="This will immediately revoke their claim eligibility, invalidate all active invitation tokens, and unlink them from all vault assets."
+          confirmLabel="Revoke Beneficiary"
+          variant="danger"
+        />
+
+        {/* Delete Confirmation */}
+        <ConfirmDialog
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteNominee}
+          title={`Delete ${deleteTarget?.name}?`}
+          description="Permanently delete this beneficiary from your digital vault records."
+          confirmLabel="Delete Nominee"
+          variant="danger"
+        />
+      </div>
     </div>
-  )
+  );
 }

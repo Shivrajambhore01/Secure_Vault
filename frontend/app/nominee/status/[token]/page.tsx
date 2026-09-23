@@ -55,22 +55,22 @@ export default function NomineeStatusPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#070b11]">
-                <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            <div className="flex min-h-screen items-center justify-center bg-[#F5F5F5]">
+                <Loader2 className="h-8 w-8 animate-spin text-black" />
             </div>
         )
     }
 
     if (!statusData || statusData.status === "NONE") {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-[#070b11] px-4 text-slate-100">
-                <Card className="w-full max-w-md border-slate-800 bg-slate-900/60 backdrop-blur-md text-center p-6 space-y-4">
+            <main className="flex min-h-screen items-center justify-center bg-[#F5F5F5] px-4 text-black font-tt-norms font-sans">
+                <Card className="w-full max-w-md border-black/8 bg-white text-center p-8 space-y-4 rounded-3xl shadow-xl">
                     <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
-                    <h2 className="text-xl font-bold">No Active Request Found</h2>
-                    <p className="text-sm text-slate-400">
+                    <h2 className="text-xl font-bold text-black">No Active Request Found</h2>
+                    <p className="text-sm text-neutral-500">
                         You have not submitted a death verification claim yet.
                     </p>
-                    <Button onClick={() => router.push(`/nominee/verify/${token}`)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold">
+                    <Button onClick={() => router.push(`/nominee/verify/${token}`)} className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-full">
                         Go to Verification Page
                     </Button>
                 </Card>
@@ -95,23 +95,17 @@ export default function NomineeStatusPage() {
     const isMoreDocs = status === "MORE_DOCUMENTS_REQUIRED"
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-[#070b11] px-4 py-12 relative overflow-hidden text-slate-100">
-            {/* Background ambient lighting */}
-            <div className="pointer-events-none absolute inset-0">
-                <div className="absolute left-1/2 top-1/4 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/5 blur-[140px]" />
-                <div className="absolute left-1/3 top-2/3 h-[500px] w-[500px] rounded-full bg-teal-500/5 blur-[120px]" />
-            </div>
-
+        <main className="flex min-h-screen items-center justify-center bg-[#F5F5F5] px-4 py-12 relative overflow-hidden text-black font-tt-norms font-sans">
             <div className="relative w-full max-w-xl z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <Card className="border-slate-800 bg-slate-900/60 backdrop-blur-md shadow-2xl">
-                    <CardHeader className="border-b border-slate-800 pb-6">
+                <Card className="border-black/8 bg-white shadow-xl rounded-3xl overflow-hidden">
+                    <CardHeader className="border-b border-black/8 pb-6">
                         <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-neutral-100 border border-black/8 text-black">
                                 <Shield className="h-5 w-5" />
                             </div>
                             <div>
-                                <CardTitle className="text-lg font-bold text-slate-100">Verification Status Portal</CardTitle>
-                                <p className="text-xs text-slate-400">Track the inheritance transfer process</p>
+                                <CardTitle className="text-lg font-bold text-black">Verification Status Portal</CardTitle>
+                                <p className="text-xs text-neutral-500">Track the inheritance transfer process</p>
                             </div>
                         </div>
                     </CardHeader>
@@ -120,10 +114,10 @@ export default function NomineeStatusPage() {
                         {/* Timeline / Stepper */}
                         <div className="relative flex justify-between items-center px-4">
                             {/* Horizontal progress bar background */}
-                            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-[2px] bg-slate-800 z-0" />
+                            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-[2px] bg-neutral-200 z-0" />
                             {/* Active progress bar indicator */}
                             <div
-                                className="absolute left-8 top-1/2 -translate-y-1/2 h-[2px] bg-emerald-500 transition-all duration-500 z-0"
+                                className="absolute left-8 top-1/2 -translate-y-1/2 h-[2px] bg-black transition-all duration-500 z-0"
                                 style={{
                                     width: isApproved || isRejected ? "100%" : isUnderReview ? "50%" : "0%"
                                 }}
@@ -132,17 +126,17 @@ export default function NomineeStatusPage() {
                             {/* Step 1: Submitted */}
                             <div className="relative flex flex-col items-center z-10">
                                 <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                                    isSubmitted ? "bg-emerald-500 border-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25" : "bg-slate-950 border-slate-800 text-slate-500"
+                                    isSubmitted ? "bg-black border-black text-white shadow-xs" : "bg-white border-black/10 text-neutral-400"
                                 }`}>
                                     <CheckCircle className="h-5 w-5" />
                                 </div>
-                                <span className={`mt-2 text-xs font-semibold ${isSubmitted ? "text-emerald-400 font-bold" : "text-slate-500"}`}>Submitted</span>
+                                <span className={`mt-2 text-xs font-semibold ${isSubmitted ? "text-black font-bold" : "text-neutral-400"}`}>Submitted</span>
                             </div>
 
                             {/* Step 2: Under Review */}
                             <div className="relative flex flex-col items-center z-10">
                                 <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                                    isUnderReview ? "bg-emerald-500 border-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25" : "bg-slate-950 border-slate-800 text-slate-500"
+                                    isUnderReview ? "bg-black border-black text-white shadow-xs" : "bg-white border-black/10 text-neutral-400"
                                 }`}>
                                     {status === "UNDER_REVIEW" ? (
                                         <Clock className="h-5 w-5 animate-spin" />
@@ -150,16 +144,16 @@ export default function NomineeStatusPage() {
                                         <Clock className="h-5 w-5" />
                                     )}
                                 </div>
-                                <span className={`mt-2 text-xs font-semibold ${isUnderReview ? "text-emerald-400 font-bold" : "text-slate-500"}`}>Under Review</span>
+                                <span className={`mt-2 text-xs font-semibold ${isUnderReview ? "text-black font-bold" : "text-neutral-400"}`}>Under Review</span>
                             </div>
 
                             {/* Step 3: Approved / Rejected */}
                             <div className="relative flex flex-col items-center z-10">
                                 <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                                    isApproved ? "bg-emerald-500 border-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25" :
-                                    isRejected ? "bg-red-500 border-red-500 text-slate-100 shadow-lg shadow-red-500/25" :
-                                    isMoreDocs ? "bg-amber-500 border-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" :
-                                    "bg-slate-950 border-slate-800 text-slate-500"
+                                    isApproved ? "bg-emerald-600 border-emerald-600 text-white shadow-xs" :
+                                    isRejected ? "bg-red-600 border-red-600 text-white shadow-xs" :
+                                    isMoreDocs ? "bg-amber-600 border-amber-600 text-white shadow-xs" :
+                                    "bg-white border-black/10 text-neutral-400"
                                 }`}>
                                     {isApproved ? (
                                         <CheckCircle className="h-5 w-5" />
@@ -172,10 +166,10 @@ export default function NomineeStatusPage() {
                                     )}
                                 </div>
                                 <span className={`mt-2 text-xs font-semibold ${
-                                    isApproved ? "text-emerald-400 font-bold" :
-                                    isRejected ? "text-red-400 font-bold" :
-                                    isMoreDocs ? "text-amber-400 font-bold" :
-                                    "text-slate-500"
+                                    isApproved ? "text-emerald-700 font-bold" :
+                                    isRejected ? "text-red-700 font-bold" :
+                                    isMoreDocs ? "text-amber-700 font-bold" :
+                                    "text-neutral-400"
                                 }`}>
                                     {isApproved ? "Approved" : isRejected ? "Rejected" : isMoreDocs ? "Action Required" : "Final Decision"}
                                 </span>
@@ -183,14 +177,14 @@ export default function NomineeStatusPage() {
                         </div>
 
                         {/* Status Message Card */}
-                        <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-5 space-y-4">
-                            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Claim Status</span>
+                        <div className="rounded-2xl border border-black/8 bg-neutral-50 p-5 space-y-4">
+                            <div className="flex items-center justify-between border-b border-black/8 pb-3">
+                                <span className="text-xs text-neutral-500 uppercase tracking-wider font-semibold">Claim Status</span>
                                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold border ${
-                                    isApproved ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                    isRejected ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                                    isMoreDocs ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                                    "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                    isApproved ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                    isRejected ? "bg-red-50 text-red-700 border-red-200" :
+                                    isMoreDocs ? "bg-amber-50 text-amber-700 border-amber-200" :
+                                    "bg-neutral-100 text-neutral-800 border-black/10"
                                 }`}>
                                     {status.replace("_", " ")}
                                 </span>
@@ -199,37 +193,37 @@ export default function NomineeStatusPage() {
                             {/* Detailed Info Grid */}
                             <div className="grid grid-cols-2 gap-4 text-xs">
                                 <div>
-                                    <p className="text-slate-400 flex items-center gap-1 mb-1"><User className="h-3.5 w-3.5" /> Account Owner</p>
-                                    <p className="font-semibold text-slate-200">{ownerName}</p>
+                                    <p className="text-neutral-500 flex items-center gap-1 mb-1"><User className="h-3.5 w-3.5" /> Account Owner</p>
+                                    <p className="font-semibold text-black">{ownerName}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 flex items-center gap-1 mb-1"><Heart className="h-3.5 w-3.5" /> Relationship</p>
-                                    <p className="font-semibold text-slate-200">{relationship}</p>
+                                    <p className="text-neutral-500 flex items-center gap-1 mb-1"><Heart className="h-3.5 w-3.5" /> Relationship</p>
+                                    <p className="font-semibold text-black">{relationship}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 flex items-center gap-1 mb-1"><Calendar className="h-3.5 w-3.5" /> Submitted On</p>
-                                    <p className="font-semibold text-slate-200">{submittedAt}</p>
+                                    <p className="text-neutral-500 flex items-center gap-1 mb-1"><Calendar className="h-3.5 w-3.5" /> Submitted On</p>
+                                    <p className="font-semibold text-black">{submittedAt}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-400 flex items-center gap-1 mb-1"><FileText className="h-3.5 w-3.5" /> Request ID</p>
-                                    <p className="font-mono text-slate-300">{verification.id}</p>
+                                    <p className="text-neutral-500 flex items-center gap-1 mb-1"><FileText className="h-3.5 w-3.5" /> Request ID</p>
+                                    <p className="font-mono text-neutral-700">{verification.id}</p>
                                 </div>
                             </div>
 
                             {/* Remarks / Rejection Reason / More Docs Instructions */}
                             {verification?.remarks && (
-                                <div className="border-t border-slate-800/50 pt-3 space-y-1">
-                                    <p className="text-xs font-semibold text-slate-400">Claimant Notes:</p>
-                                    <p className="text-xs text-slate-300 italic">"{verification.remarks}"</p>
+                                <div className="border-t border-black/8 pt-3 space-y-1">
+                                    <p className="text-xs font-semibold text-neutral-500">Claimant Notes:</p>
+                                    <p className="text-xs text-black italic">"{verification.remarks}"</p>
                                 </div>
                             )}
 
                             {statusData.verification.remarks && (isRejected || isMoreDocs) && (
-                                <div className="border-t border-red-500/20 bg-red-950/10 p-3 rounded-lg space-y-1">
-                                    <p className="text-xs font-bold text-red-400 flex items-center gap-1">
+                                <div className="border-t border-red-200 bg-red-50 p-3 rounded-xl space-y-1">
+                                    <p className="text-xs font-bold text-red-700 flex items-center gap-1">
                                         <AlertTriangle className="h-3.5 w-3.5" /> Compliance Feedback:
                                     </p>
-                                    <p className="text-xs text-red-300 italic">"{statusData.verification.remarks}"</p>
+                                    <p className="text-xs text-red-800 italic">"{statusData.verification.remarks}"</p>
                                 </div>
                             )}
                         </div>
@@ -242,7 +236,7 @@ export default function NomineeStatusPage() {
                                         sessionStorage.setItem(`sv_nominee_token_${token}`, token)
                                         router.push(`/nominee/vault/${token}`)
                                     }}
-                                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold py-6 rounded-xl shadow-lg shadow-emerald-500/20"
+                                    className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-full shadow-sm"
                                 >
                                     <FolderKey className="h-5 w-5 mr-2" /> Access Inherited Assets (View-Only)
                                 </Button>
@@ -253,7 +247,7 @@ export default function NomineeStatusPage() {
                                     onClick={() => {
                                         router.push(`/nominee/verify/${token}`)
                                     }}
-                                    className="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-slate-100 font-bold py-6 rounded-xl shadow-lg shadow-red-500/20"
+                                    className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-full shadow-sm"
                                 >
                                     <RefreshCw className="h-5 w-5 mr-2" /> Resubmit Claim & Upload Documents
                                 </Button>
@@ -264,14 +258,14 @@ export default function NomineeStatusPage() {
                                     onClick={() => {
                                         router.push(`/nominee/verify/${token}`)
                                     }}
-                                    className="w-full bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-slate-950 font-bold py-6 rounded-xl shadow-lg shadow-amber-500/20"
+                                    className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-full shadow-sm"
                                 >
                                     <RefreshCw className="h-5 w-5 mr-2" /> Upload Supporting Documents
                                 </Button>
                             )}
 
                             {!isApproved && !isRejected && !isMoreDocs && (
-                                <div className="text-center p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-xs text-emerald-400">
+                                <div className="text-center p-4 rounded-2xl border border-black/8 bg-neutral-50 text-xs text-neutral-600">
                                     Our compliance team is actively reviewing your request. You will receive an email update once processed.
                                 </div>
                             )}
@@ -279,7 +273,7 @@ export default function NomineeStatusPage() {
                             <Button
                                 variant="ghost"
                                 onClick={() => router.push(`/nominee/verify/${token}`)}
-                                className="w-full hover:bg-slate-800 text-xs text-slate-400 hover:text-slate-200"
+                                className="w-full text-xs text-neutral-500 hover:text-black rounded-full"
                             >
                                 <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Return to Nominee Portal
                             </Button>

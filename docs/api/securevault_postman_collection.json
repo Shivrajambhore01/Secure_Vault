@@ -1,0 +1,506 @@
+{
+  "info": {
+    "_postman_id": "securevault-enterprise-v2-collection",
+    "name": "SecureVault Enterprise API v2.0",
+    "description": "Comprehensive Postman v2.1 collection for SecureVault institutional digital inheritance, zero-knowledge vault, fraud mitigation, SIEM audit, and worker task engine.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assetId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "claimId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Health & System Telemetry",
+      "item": [
+        {
+          "name": "Public Ping Probes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            }
+          }
+        },
+        {
+          "name": "Deep Subsystem Health Telemetry",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/system/health/deep",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "system", "health", "deep"]
+            }
+          }
+        },
+        {
+          "name": "Distributed Worker Status & Leases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/system/workers/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "system", "workers", "status"]
+            }
+          }
+        },
+        {
+          "name": "Export OpenAPI 3.1 JSON Contract",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/docs/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "docs", "export"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Authentication & Sessions",
+      "item": [
+        {
+          "name": "Register Owner Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@securevault.corp\",\n  \"password\": \"EnterpriseVaultPass#2026\",\n  \"fullName\": \"Dr. Alexander Vault\",\n  \"phone\": \"+15551234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Authenticate & Issue JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('userToken', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@securevault.corp\",\n  \"password\": \"EnterpriseVaultPass#2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Setup TOTP MFA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/mfa/setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "mfa", "setup"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - User Heartbeat & Dead Man Switch",
+      "item": [
+        {
+          "name": "Send I Am Alive Heartbeat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/heartbeat",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "heartbeat"]
+            }
+          }
+        },
+        {
+          "name": "Get Switch Status & Next Escalation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vault/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vault", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Zero-Knowledge Vault Assets",
+      "item": [
+        {
+          "name": "Store Encrypted Asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Swiss Offshore Private Key Master\",\n  \"category\": \"CRYPTO_WALLET\",\n  \"content\": \"mnemonic: digital alpine silver orbit crystal matrix...\",\n  \"sensitivity\": \"CRITICAL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assets"]
+            }
+          }
+        },
+        {
+          "name": "List User Encrypted Assets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assets"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Nominees & Guardians",
+      "item": [
+        {
+          "name": "Enroll Nominee Beneficiary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Eleanor Vance\",\n  \"email\": \"eleanor@familyestate.org\",\n  \"relationship\": \"Spouse\",\n  \"tier\": \"PRIMARY\",\n  \"allocationPercentage\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/nominees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "nominees"]
+            }
+          }
+        },
+        {
+          "name": "List Nominees",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/nominees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "nominees"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Claims & Anti-Fraud Engine",
+      "item": [
+        {
+          "name": "Submit Nominee Inheritance Claim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerEmail\": \"owner@securevault.corp\",\n  \"claimantEmail\": \"eleanor@familyestate.org\",\n  \"deathCertificateNumber\": \"CERT-2026-US-881920\",\n  \"issuingJurisdiction\": \"California Dept of Health\",\n  \"documentIpfsHash\": \"QmZtmD2qt8fQgmtK7vDaZBHdHShsmQ2g\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims"]
+            }
+          }
+        },
+        {
+          "name": "Owner Emergency Dispute Nullification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disputeReason\": \"I am alive and well. Unauthorized claim attempt detected.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/claims/{{claimId}}/dispute",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "claims", "{{claimId}}", "dispute"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - SIEM & Tamper-Evident Ledger",
+      "item": [
+        {
+          "name": "Verify Audit Chain Cryptographic Integrity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/siem/audit/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "siem", "audit", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Get Tamper-Evident Ledger Records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/siem/audit/events?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "siem", "audit", "events"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Compliance & GDPR Zeroization",
+      "item": [
+        {
+          "name": "Generate Article 20 Portability Package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/compliance/export/gdpr",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "compliance", "export", "gdpr"]
+            }
+          }
+        },
+        {
+          "name": "Initiate Article 17 Cryptographic Erasure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmation\": \"I_CONFIRM_PERMANENT_CRYPTOGRAPHIC_ZEROIZATION\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/compliance/zeroize",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "compliance", "zeroize"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Task Queue & Distributed Workers",
+      "item": [
+        {
+          "name": "Enqueue Maintenance Sweep Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/system/trigger/inactivity_sweep",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "system", "trigger", "inactivity_sweep"]
+            }
+          }
+        },
+        {
+          "name": "List Durable Queue & DLQ Jobs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/system/jobs?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "system", "jobs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

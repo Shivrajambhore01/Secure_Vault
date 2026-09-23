@@ -47,6 +47,11 @@ class _Window:
 _store: Dict[str, _Window] = defaultdict(lambda: _Window(window_start=time.monotonic()))
 
 
+def reset_rate_limits() -> None:
+    """Clear all rate limit tracking stores. Useful for test isolation."""
+    _store.clear()
+
+
 def _check_limit(key: str, max_requests: int, window_seconds: int) -> Tuple[bool, int, int]:
     """
     Check whether a request is within rate limits using a sliding fixed window.
