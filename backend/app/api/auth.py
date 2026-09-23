@@ -284,7 +284,7 @@ async def signup(data: SignupRequest, response: Response, request: Request):
         "inactivityPeriod": 6,
         "plan": "free",
         "storageUsed": 0,
-        "storageLimit": 500 * 1024 * 1024,
+        "storageLimit": 50 * 1024 * 1024,
         "isVerified": False,
         "verificationToken": verification_token,
         "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -677,24 +677,11 @@ async def verify_pin(data: VerifyPinRequest, request: Request):
 # ------------------------------------------------------------------
 @router.post("/update-plan")
 async def update_plan(data: UpdatePlanRequest, current_user: dict = Depends(get_current_user)):
-    if not data.userId or not data.plan:
-        raise HTTPException(status_code=400, detail="UserId and Plan are required")
-
-    limits = {
-        "free": 500 * 1024 * 1024,
-        "pro": 10 * 1024 * 1024 * 1024,
-        "premium": 100 * 1024 * 1024 * 1024,
-    }
-
-    result = await users_col.find_one_and_update(
-        {"_id": ObjectId(data.userId)},
-        {"$set": {"plan": data.plan, "storageLimit": limits.get(data.plan, limits["free"])}},
-        return_document=True,
+    # Deprecated endpoint — direct plan upgrades are no longer permitted
+    raise HTTPException(
+        status_code=410,
+        detail="Direct plan updates are disabled. Please submit a payment request via /api/payments/request to upgrade your plan.",
     )
-    if not result:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return {"message": f"Upgraded to {data.plan} successfully!", "user": _serialize_user(result)}
 
 
 # ------------------------------------------------------------------
@@ -717,7 +704,7 @@ async def get_user_profile(user_id: str, current_user: dict = Depends(get_curren
     if not user_data.get("plan"):
         user_data["plan"] = "free"
     if not user_data.get("storageLimit"):
-        user_data["storageLimit"] = 500 * 1024 * 1024
+        user_data["storageLimit"] = 50 * 1024 * 1024
 
     # Auto-fix storageUsed
     if not user_data.get("storageUsed"):
@@ -925,7 +912,7 @@ async def google_auth(data: GoogleAuthRequest, response: Response, request: Requ
             "inactivityPeriod": 6,
             "plan": "free",
             "storageUsed": 0,
-            "storageLimit": 500 * 1024 * 1024,
+            "storageLimit": 50 * 1024 * 1024,
             "isVerified": email_verified,
             "verificationToken": verification_token if not email_verified else None,
             "verificationTokenExpires": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),

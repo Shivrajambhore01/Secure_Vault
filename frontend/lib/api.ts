@@ -39,6 +39,7 @@ export async function secureFetch(endpoint: string, options: RequestInit = {}): 
         headers: {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest", // CSRF protection hint
+            "ngrok-skip-browser-warning": "true",
             ...options.headers,
         },
     }

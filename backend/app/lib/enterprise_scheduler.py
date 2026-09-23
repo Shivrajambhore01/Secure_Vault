@@ -302,6 +302,25 @@ def start_inactivity_scheduler():
         name="Orphaned Document Cleanup",
     )
 
+    # ── Job 9: Subscription Expiry Check (daily at 02:00 UTC) ────────
+    async def _run_subscription_expiry():
+        try:
+            from app.lib.subscription_service import expire_subscriptions
+            count = await expire_subscriptions()
+            if count > 0:
+                logger.info("[SUBSCRIPTION-EXPIRY] Expired %d subscriptions.", count)
+        except Exception as e:
+            logger.error("[SUBSCRIPTION-EXPIRY] Error expiring subscriptions: %s", e)
+
+    scheduler.add_job(
+        _run_subscription_expiry,
+        "cron",
+        hour=2,
+        minute=0,
+        id="subscription_expiry",
+        name="Daily Subscription Expiry Check",
+    )
+
     scheduler.start()
     logger.info("[SCHEDULER] Enterprise scheduler started with %d jobs.", len(scheduler.get_jobs()))
     return scheduler

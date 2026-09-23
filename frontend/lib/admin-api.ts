@@ -35,6 +35,7 @@ export async function secureAdminFetch(endpoint: string, options: RequestInit = 
     headers: {
       "Content-Type": "application/json",
       "X-Requested-With": "XMLHttpRequest",
+      "ngrok-skip-browser-warning": "true",
       ...options.headers,
     },
   }

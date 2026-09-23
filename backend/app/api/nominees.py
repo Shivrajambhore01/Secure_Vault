@@ -14,6 +14,7 @@ from typing import Optional, Any
 from app.core.config import get_settings
 from app.core.database import db
 from app.core.security import get_current_user
+from app.lib.limit_enforcement import check_nominee_limit
 
 router = APIRouter()
 settings = get_settings()
@@ -283,6 +284,11 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
         )
         return {"message": "Nominee updated successfully", "id": nominee_id}
     else:
+        # Check plan nominee limit
+        user = await db["users"].find_one({"_id": ObjectId(user_id)})
+        user_plan = user.get("plan", "free") if user else "free"
+        await check_nominee_limit(user_id, user_plan)
+
         access_token = secrets.token_urlsafe(32)
         token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
         new_id = nominee_id or ("".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:])

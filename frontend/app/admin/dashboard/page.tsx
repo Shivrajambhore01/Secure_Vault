@@ -13,6 +13,7 @@ import {
   TrendingUp,
   FileCheck,
   RefreshCw,
+  CreditCard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -248,6 +249,18 @@ export default function AdminDashboardPage() {
                   {Object.keys(data.planDistribution).length === 0 && (
                     <p className="text-xs text-muted-foreground">No subscriber records found.</p>
                   )}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs font-semibold border-violet-500/30 text-violet-400 hover:bg-violet-500/10 gap-2 rounded-xl"
+                    onClick={() => router.push("/admin/dashboard/payments")}
+                  >
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Payment Verification Oversight
+                  </Button>
                 </div>
               </div>
             </CardContent>

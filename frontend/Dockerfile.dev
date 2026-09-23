@@ -1,0 +1,25 @@
+# SecureVault Frontend Development Dockerfile (Hot Reload Enabled)
+FROM node:20-alpine
+
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm install
+
+# Copy source code (will be overridden by ./frontend:/app mount in development)
+COPY . .
+
+# Environment defaults for development
+ENV NODE_ENV=development \
+    PORT=3000 \
+    HOSTNAME="0.0.0.0" \
+    WATCHPACK_POLLING=true \
+    NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3000
+
+# Start Next.js development server
+CMD ["npm", "run", "dev"]

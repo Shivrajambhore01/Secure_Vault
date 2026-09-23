@@ -89,6 +89,17 @@ export interface VerificationRequest {
   aiVerificationFull?: AIVerificationResult
 }
 
+export interface VerificationDocument {
+  id: string
+  documentType: string
+  fileName: string
+  mimeType: string
+  isPreferred?: boolean
+  isAdditional?: boolean
+  idType?: string
+  createdAt?: string
+}
+
 export interface VerificationDetail {
   verification: VerificationRequest
   owner: any
@@ -96,6 +107,7 @@ export interface VerificationDetail {
   reviewer: any
   auditLogs: any[]
   aiVerification?: AIVerificationResult | null
+  documents?: VerificationDocument[]
 }
 
 export async function fetchVerificationStats() {

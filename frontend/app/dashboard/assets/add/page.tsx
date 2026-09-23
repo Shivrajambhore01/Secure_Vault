@@ -255,11 +255,30 @@ export default function AddAssetPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(JSON.parse(xhr.responseText))
           } else {
-            reject(new Error("Upload failed"))
+            try {
+              const errData = JSON.parse(xhr.responseText)
+              const detail = errData.detail || errData.error || {}
+              if (xhr.status === 402 || detail.error === "upgrade_required") {
+                const msg = typeof detail === "object" ? detail.message : detail
+                toast.error(msg || "Plan limit reached. Please upgrade your plan.", {
+                  action: {
+                    label: "Upgrade Plan",
+                    onClick: () => router.push("/dashboard/pricing"),
+                  },
+                  duration: 8000,
+                })
+                reject(new Error(msg || "Upgrade required"))
+                return
+              }
+              const errorMsg = typeof detail === "string" ? detail : detail.message || errData.message || "Upload failed"
+              reject(new Error(errorMsg))
+            } catch {
+              reject(new Error("Upload failed"))
+            }
           }
         }
 
-        xhr.onerror = () => reject(new Error("Network error"))
+        xhr.onerror = () => reject(new Error("Network connection error"))
         xhr.send(formData)
       })
 
@@ -277,8 +296,10 @@ export default function AddAssetPage() {
       setTimeout(() => {
         router.push("/dashboard/assets")
       }, 1500)
-    } catch (error) {
-      toast.error("Error saving asset")
+    } catch (error: any) {
+      if (error?.message && error.message !== "Upgrade required") {
+        toast.error(error.message || "Error saving asset")
+      }
       setLoading(false)
       setUploadProgress(0)
     }

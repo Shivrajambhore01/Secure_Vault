@@ -15,7 +15,9 @@ import {
   FileSearch,
   Activity,
   History,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight,
+  Camera
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -28,9 +30,9 @@ import {
   fetchVerificationDetail,
   assignVerification,
   reviewVerification,
-  getVerificationFileUrl,
   getVerificationDocumentUrl,
-  VerificationDetail
+  VerificationDetail,
+  VerificationDocument
 } from "@/lib/verification-api"
 import { VerificationStatusBadge } from "@/components/admin/verification-status-badge"
 import { VerificationDocumentViewer } from "@/components/admin/verification-document-viewer"
@@ -50,6 +52,23 @@ export default function VerificationDetailPage() {
   // Action Dialog State
   const [actionDialogOpen, setActionDialogOpen] = useState(false)
   const [currentAction, setCurrentAction] = useState<"APPROVE" | "REJECT" | "REQUEST_MORE_DOCS" | null>(null)
+
+  // Selected document for viewing
+  const [selectedDoc, setSelectedDoc] = useState<VerificationDocument | null>(null)
+
+  // Helper: format documentType for display (e.g. "DEATH_CERTIFICATE" → "Death Certificate")
+  const formatDocType = (docType: string) =>
+    docType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+
+  // Helper: color dot by document type category
+  const getDocDotColor = (docType: string) => {
+    const t = docType.toUpperCase()
+    if (t.includes("DEATH") || t.includes("CERTIFICATE")) return "bg-red-500"
+    if (t.includes("GOVT") || t.includes("GOVERNMENT") || t.includes("ID")) return "bg-emerald-500"
+    if (t.includes("SELFIE") || t.includes("FACE") || t.includes("BIOMETRIC")) return "bg-purple-500"
+    if (t.includes("SUPPORT") || t.includes("RELATIONSHIP") || t.includes("PROOF")) return "bg-amber-500"
+    return "bg-blue-500"
+  }
 
   useEffect(() => {
     loadDetail()
@@ -146,7 +165,7 @@ export default function VerificationDetailPage() {
   const canReview = !isFinalStatus
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500 lg:h-[calc(100vh-100px)] lg:flex lg:flex-col lg:pb-0 lg:overflow-hidden pb-20">
       <VerificationActionDialog
         open={actionDialogOpen}
         onOpenChange={setActionDialogOpen}
@@ -155,7 +174,7 @@ export default function VerificationDetailPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.push("/admin/verifications")} className="rounded-full hover:bg-muted">
             <ArrowLeft className="w-5 h-5" />
@@ -196,10 +215,10 @@ export default function VerificationDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
         
         {/* Left Column: Profiles & Context */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="w-full lg:w-1/3 space-y-6 lg:overflow-y-auto lg:pr-3 pb-6 lg:pb-12">
           
           {/* Owner Profile */}
           <Card className="border-border bg-card">
@@ -380,114 +399,230 @@ export default function VerificationDetailPage() {
         </div>
 
         {/* Right Column: Documents */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="border-border bg-card h-full flex flex-col">
-            <CardHeader className="pb-4 border-b border-border">
+        <div className="w-full lg:w-2/3 h-full min-h-0 flex flex-col">
+          <Card className="border-border bg-card h-full flex flex-col overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border flex-shrink-0">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <FileSearch className="w-5 h-5 text-blue-500" />
                 Submitted Documents
               </CardTitle>
               <CardDescription>
-                Review the provided documents carefully. Ensure names and dates match the account records.
+                {selectedDoc
+                  ? `Viewing: ${selectedDoc.fileName}`
+                  : `${(data.documents || []).length} document${(data.documents || []).length !== 1 ? "s" : ""} submitted for review.`}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 p-6 space-y-8">
-              
-              {/* Death Evidence Collection */}
-              <div className="space-y-6">
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Death evidence Documents</h3>
+            <CardContent className="flex-1 p-6 overflow-y-auto">
+
+              <div className="flex flex-col h-full space-y-6">
                 
-                {v.deathEvidence && v.deathEvidence.length > 0 ? (
-                  <div className="space-y-6">
-                    {v.deathEvidence.map((doc: any, idx: number) => (
-                      <div key={idx} className="space-y-2.5">
-                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${doc.isPreferred ? "bg-emerald-500" : "bg-amber-500"}`} />
-                          {doc.documentType.replace(/_/g, " ")} {doc.isPreferred ? "(Preferred)" : "(Alternative)"}
+                {/* Document List */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Submitted Documents</h3>
+                  {(data.documents && data.documents.length > 0) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {data.documents.map((doc) => {
+                        const isImage = doc.mimeType?.startsWith("image/") ||
+                          /\.(jpeg|jpg|png|webp|gif)$/i.test(doc.fileName || "")
+                        const isSelected = selectedDoc?.id === doc.id
+                        
+                        return (
+                          <button
+                            key={doc.id}
+                            onClick={() => setSelectedDoc(doc)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group text-left ${
+                              isSelected 
+                                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                                : "border-border bg-background/40 hover:bg-muted/60 hover:border-primary/30"
+                            }`}
+                          >
+                            {/* File icon */}
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              isImage
+                                ? "bg-purple-500/10 text-purple-400"
+                                : "bg-blue-500/10 text-blue-400"
+                            }`}>
+                              {isImage ? <Camera className="w-4 h-4" /> : <FileSearch className="w-4 h-4" />}
+                            </div>
+
+                            {/* File details */}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium truncate transition-colors ${
+                                isSelected ? "text-primary font-semibold" : "text-foreground group-hover:text-primary"
+                              }`}>
+                                {doc.fileName}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                <span className={`w-1.5 h-1.5 rounded-full inline-block ${getDocDotColor(doc.documentType)}`} />
+                                {formatDocType(doc.documentType)}
+                                {doc.isPreferred && (
+                                  <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1 rounded">Preferred</span>
+                                )}
+                                {doc.isAdditional && (
+                                  <span className="text-[9px] text-amber-400 bg-amber-500/10 px-1 rounded">Additional</span>
+                                )}
+                              </p>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    /* Fallback for legacy requests with no documents array */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {v.certificateFile && (
+                        <button
+                          onClick={() => setSelectedDoc({
+                            id: v.certificateFile.id || v.certificateFile._id,
+                            documentType: "DEATH_CERTIFICATE",
+                            fileName: v.certificateFile.fileName || "certificate",
+                            mimeType: v.certificateFile.mimeType || "application/pdf",
+                          })}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group text-left ${
+                            selectedDoc?.id === (v.certificateFile.id || v.certificateFile._id)
+                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                              : "border-border bg-background/40 hover:bg-muted/60 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/10 text-blue-400">
+                            <FileSearch className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{v.certificateFile.fileName || "Death Certificate"}</p>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full inline-block bg-red-500" />
+                              Death Certificate
+                            </p>
+                          </div>
+                        </button>
+                      )}
+                      {v.governmentIdFile && (
+                        <button
+                          onClick={() => setSelectedDoc({
+                            id: v.governmentIdFile.id || v.governmentIdFile._id,
+                            documentType: "GOVT_ID",
+                            fileName: v.governmentIdFile.fileName || "government_id",
+                            mimeType: v.governmentIdFile.mimeType || "application/pdf",
+                          })}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group text-left ${
+                            selectedDoc?.id === (v.governmentIdFile.id || v.governmentIdFile._id)
+                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                              : "border-border bg-background/40 hover:bg-muted/60 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/10 text-blue-400">
+                            <FileSearch className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{v.governmentIdFile.fileName || "Government ID"}</p>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full inline-block bg-emerald-500" />
+                              Government ID
+                            </p>
+                          </div>
+                        </button>
+                      )}
+                      {v.selfieFile && (
+                        <button
+                          onClick={() => setSelectedDoc({
+                            id: v.selfieFile.id || v.selfieFile._id,
+                            documentType: "SELFIE",
+                            fileName: v.selfieFile.fileName || "selfie",
+                            mimeType: v.selfieFile.mimeType || "image/jpeg",
+                          })}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group text-left ${
+                            selectedDoc?.id === (v.selfieFile.id || v.selfieFile._id)
+                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                              : "border-border bg-background/40 hover:bg-muted/60 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-purple-500/10 text-purple-400">
+                            <Camera className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{v.selfieFile.fileName || "Selfie"}</p>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full inline-block bg-purple-500" />
+                              Biometric Selfie
+                            </p>
+                          </div>
+                        </button>
+                      )}
+                      {v.relationshipProofFile && (
+                        <button
+                          onClick={() => setSelectedDoc({
+                            id: v.relationshipProofFile.id || v.relationshipProofFile._id,
+                            documentType: "SUPPORTING_EVIDENCE",
+                            fileName: v.relationshipProofFile.fileName || "relationship_proof",
+                            mimeType: v.relationshipProofFile.mimeType || "application/pdf",
+                          })}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 group text-left ${
+                            selectedDoc?.id === (v.relationshipProofFile.id || v.relationshipProofFile._id)
+                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
+                              : "border-border bg-background/40 hover:bg-muted/60 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/10 text-blue-400">
+                            <FileSearch className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{v.relationshipProofFile.fileName || "Relationship Proof"}</p>
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full inline-block bg-amber-500" />
+                              Relationship Proof
+                            </p>
+                          </div>
+                        </button>
+                      )}
+                      {!v.certificateFile && !v.governmentIdFile && !v.selfieFile && !v.relationshipProofFile && (
+                        <div className="col-span-full flex flex-col items-center justify-center py-8 text-center bg-muted/20 rounded-xl border border-dashed border-border">
+                          <AlertTriangle className="w-6 h-6 text-muted-foreground mb-2" />
+                          <p className="text-xs font-medium text-muted-foreground">No documents submitted.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Separator className="bg-border" />
+
+                {/* Document Viewer Area */}
+                <div className="flex-1 flex flex-col min-h-[500px]">
+                  {selectedDoc ? (
+                    <div className="flex-1 flex flex-col space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-semibold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                          <div className={`w-2 h-2 rounded-full ${getDocDotColor(selectedDoc.documentType)}`} />
+                          {formatDocType(selectedDoc.documentType)}
+                          {selectedDoc.isPreferred && (
+                            <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Preferred</span>
+                          )}
+                          {selectedDoc.isAdditional && (
+                            <span className="text-[10px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Additional</span>
+                          )}
                         </h4>
+                      </div>
+                      <div className="flex-1">
                         <VerificationDocumentViewer
-                          label={doc.documentType.replace(/_/g, " ")}
-                          url={getVerificationDocumentUrl(v.id, doc.documentId)}
-                          fileName={doc.fileName}
-                          mimeType={doc.mimeType || "application/pdf"}
+                          label={formatDocType(selectedDoc.documentType)}
+                          url={getVerificationDocumentUrl(v.id, selectedDoc.id)}
+                          fileName={selectedDoc.fileName}
+                          mimeType={selectedDoc.mimeType}
                         />
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  // Fallback for legacy requests
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      Death Certificate (Legacy Submission)
-                    </h3>
-                    <VerificationDocumentViewer
-                      label="Death Certificate"
-                      url={v.certificateFile ? getVerificationFileUrl(v.id, "certificate") : null}
-                      fileName={v.certificateFile?.fileName}
-                      mimeType={v.certificateFile?.mimeType}
-                    />
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl bg-muted/10 p-12 text-center">
+                      <FileSearch className="w-10 h-10 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-sm font-semibold text-foreground mb-1">No Document Selected</h3>
+                      <p className="text-xs text-muted-foreground max-w-sm">
+                        Select a document from the list above to view it here in the verification workspace.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
               </div>
-
-              {/* Govt ID */}
-              {v.governmentIdFile && (
-                <>
-                  <Separator className="bg-border my-8" />
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      Government-Issued ID
-                    </h3>
-                    <VerificationDocumentViewer
-                      label="Government ID"
-                      url={getVerificationDocumentUrl(v.id, v.governmentIdFile.id || v.governmentIdFile._id)}
-                      fileName={v.governmentIdFile.fileName}
-                      mimeType={v.governmentIdFile.mimeType}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Selfie File */}
-              {v.selfieFile && (
-                <>
-                  <Separator className="bg-border my-8" />
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500" />
-                      Biometric Selfie
-                    </h3>
-                    <VerificationDocumentViewer
-                      label="Biometric Selfie"
-                      url={getVerificationDocumentUrl(v.id, v.selfieFile.id || v.selfieFile._id)}
-                      fileName={v.selfieFile.fileName}
-                      mimeType={v.selfieFile.mimeType}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Relationship Proof (Legacy) */}
-              {v.relationshipProofFile && (
-                <>
-                  <Separator className="bg-border my-8" />
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      Relationship Proof
-                    </h3>
-                    <VerificationDocumentViewer
-                      label="Relationship Proof"
-                      url={getVerificationDocumentUrl(v.id, v.relationshipProofFile.id || v.relationshipProofFile._id)}
-                      fileName={v.relationshipProofFile.fileName}
-                      mimeType={v.relationshipProofFile.mimeType}
-                    />
-                  </div>
-                </>
-              )}
-              
             </CardContent>
           </Card>
         </div>

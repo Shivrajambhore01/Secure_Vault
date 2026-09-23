@@ -1,14 +1,48 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Check, Crown, Flame, Zap, Loader2, Sparkles } from "lucide-react"
+import React, { useState, useEffect, useCallback } from "react"
+import {
+    Check,
+    Crown,
+    Flame,
+    Zap,
+    Sparkles,
+    ShieldCheck,
+    Clock,
+    Receipt,
+    FileText,
+    HardDrive,
+    Users,
+    FileUp,
+    FolderLock,
+    Lock,
+    HelpCircle,
+    ArrowRight,
+    CheckCircle2,
+    Shield,
+    KeyRound,
+    UserCheck,
+    BadgeCheck,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
-import { getUser, saveUser, getCurrentUserId } from "@/lib/store"
-import { secureFetch } from "@/lib/api"
-import type { User } from "@/lib/store"
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion"
+import { getUser } from "@/lib/store"
+import {
+    fetchPlans,
+    fetchMySubscription,
+    PlanInfo,
+    ActiveSubscription,
+    PaymentRequestItem,
+    InvoiceItem,
+} from "@/lib/payment-api"
+import { PaymentModal } from "@/components/dashboard/payment-modal"
 
 const plans = [
   {

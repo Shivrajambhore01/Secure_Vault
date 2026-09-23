@@ -12,6 +12,8 @@ from app.core.database import verify_connection
 from app.api.auth import router as auth_router
 from app.api.assets import router as assets_router
 from app.api.nominees import router as nominees_router
+from app.api.payments import router as payments_router
+from app.api.payment_admin import router as payment_admin_router
 from app.api.admin_auth import router as admin_auth_router
 from app.api.admin import router as admin_router
 from app.api.verification import router as verification_router
@@ -231,15 +233,15 @@ if frontend_url_clean not in allowed_origins:
     allowed_origins.append(frontend_url_clean)
 if settings.FRONTEND_URL not in allowed_origins:
     allowed_origins.append(settings.FRONTEND_URL)
-print("ALLOWED CORS ORIGINS:", allowed_origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):.*|https://.*\.vercel\.app",
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.vercel\.app|https://.*\.ngrok-free\.dev|https://.*\.ngrok-free\.app|https://.*\.ngrok\.io|https://.*\.ngrok\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # ------------------------------------------------------------------
@@ -260,6 +262,7 @@ app.include_router(api_v1_router)
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 app.include_router(assets_router, prefix="/api/assets", tags=["Assets"])
 app.include_router(nominees_router, prefix="/api/nominees", tags=["Nominees"])
+app.include_router(payments_router, prefix="/api/payments", tags=["Payments"])
 
 # ------------------------------------------------------------------
 # Admin Routes (completely separate from user routes)
@@ -269,6 +272,7 @@ app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
 app.include_router(verification_router, prefix="/api/admin/verification", tags=["Verification Admin"])
 app.include_router(security_admin_router, prefix="/api/admin/security", tags=["Security Admin"])
 app.include_router(support_admin_router, prefix="/api/admin/support", tags=["Support Admin"])
+app.include_router(payment_admin_router, prefix="/api/admin/support/payments", tags=["Payment Admin"])
 
 # ------------------------------------------------------------------
 # Nominee Verification Submission (legacy simple submit)

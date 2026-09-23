@@ -16,7 +16,8 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  LifeBuoy
+  LifeBuoy,
+  CreditCard
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -161,6 +162,33 @@ export default function SupportDashboardPage() {
           />
         </div>
       )}
+
+      {/* Payment Verification Quick Access Card */}
+      <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-card to-card">
+        <CardContent className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-11 w-11 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <CreditCard className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                Subscription & UPI Payment Verification
+                <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Active
+                </span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Review submitted UPI payment receipts, verify UTR reference numbers, and approve plan upgrades.
+              </p>
+            </div>
+          </div>
+          <Link href="/admin/support/payments" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl gap-2 shadow-lg shadow-emerald-600/20">
+              Open Payment Queue <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
 
       {/* User Search Card */}
       <Card className="border-border bg-card">
