@@ -230,7 +230,9 @@ async def get_nominee_assets(session_token: str):
 @router.get("/{user_id}")
 async def get_nominees(user_id: str, current_user: dict = Depends(get_current_user)):
     caller_user_id = current_user.get("userId") or current_user.get("id")
-    if caller_user_id and str(caller_user_id) != str(user_id):
+    if user_id == "me" and caller_user_id:
+        user_id = str(caller_user_id)
+    elif caller_user_id and str(caller_user_id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: Cannot access another user's nominees")
 
     nominees = await nominees_col.find({"userId": user_id}).to_list(length=None)
@@ -260,25 +262,30 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
     nominee_id = body.pop("id", None)
     user_id = body.pop("userId", None)
 
+    caller_user_id = current_user.get("userId") or current_user.get("id")
+    if not user_id or user_id == "me":
+        user_id = str(caller_user_id) if caller_user_id else None
+
     if not user_id:
         raise HTTPException(status_code=400, detail="UserId is required")
 
-    caller_user_id = current_user.get("userId") or current_user.get("id")
     if caller_user_id and str(caller_user_id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: Cannot modify another user's nominees")
 
-    access_token = secrets.token_urlsafe(32)
-    token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
-
+    existing_nominee = None
     if nominee_id:
+        existing_nominee = await nominees_col.find_one({"id": nominee_id, "userId": user_id})
+
+    if existing_nominee:
         await nominees_col.update_one(
             {"id": nominee_id, "userId": user_id},
             {"$set": {**body, "updatedAt": datetime.now(timezone.utc).isoformat()}},
-            upsert=True,
         )
-        return {"message": "Nominee updated successfully"}
+        return {"message": "Nominee updated successfully", "id": nominee_id}
     else:
-        new_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:]
+        access_token = secrets.token_urlsafe(32)
+        token_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+        new_id = nominee_id or ("".join(random.choices(string.ascii_lowercase + string.digits, k=13)) + hex(int(time.time()))[2:])
         new_nominee = {
             "id": new_id,
             "userId": user_id,
@@ -288,7 +295,7 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
             "createdAt": datetime.now(timezone.utc).isoformat(),
         }
         await nominees_col.insert_one(new_nominee)
-        return {"message": "Nominee created successfully", "token": access_token}
+        return {"message": "Nominee created successfully", "token": access_token, "id": new_id}
 
 
 # ------------------------------------------------------------------
@@ -297,7 +304,9 @@ async def save_nominee(body: dict = Body(...), current_user: dict = Depends(get_
 @router.delete("/{user_id}/{nominee_id}")
 async def delete_nominee(user_id: str, nominee_id: str, current_user: dict = Depends(get_current_user)):
     caller_user_id = current_user.get("userId") or current_user.get("id")
-    if caller_user_id and str(caller_user_id) != str(user_id):
+    if user_id == "me" and caller_user_id:
+        user_id = str(caller_user_id)
+    elif caller_user_id and str(caller_user_id) != str(user_id):
         raise HTTPException(status_code=403, detail="Forbidden: Cannot delete another user's nominee")
 
     # Delete nominee record

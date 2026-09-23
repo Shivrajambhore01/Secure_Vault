@@ -79,26 +79,24 @@ export default function NomineesPage() {
   const [relationship, setRelationship] = useState("")
 
   useEffect(() => {
-    const userId = getCurrentUserId()
-    if (userId) {
-      const fetchData = async () => {
-        try {
-          const [nomineesRes, assetsRes] = await Promise.all([
-            secureFetch(`/nominees/${userId}`),
-            secureFetch(`/assets/${userId}`)
-          ])
-          setNominees(await nomineesRes.json())
-          setAssets(await assetsRes.json())
-        } catch (error) {
-          toast.error("Failed to fetch data")
-        }
+    const userId = getCurrentUserId() || "me"
+    const fetchData = async () => {
+      try {
+        const [nomineesRes, assetsRes] = await Promise.all([
+          secureFetch(`/nominees/${userId}`),
+          secureFetch(`/assets/${userId}`)
+        ])
+        if (nomineesRes.ok) setNominees(await nomineesRes.json())
+        if (assetsRes.ok) setAssets(await assetsRes.json())
+      } catch (error) {
+        toast.error("Failed to fetch data")
       }
-      fetchData()
+    }
+    fetchData()
 
-      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
-      if (searchParams?.get("returnTo")) {
-        setShowForm(true)
-      }
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
+    if (searchParams?.get("returnTo")) {
+      setShowForm(true)
     }
   }, [])
 
@@ -114,7 +112,7 @@ export default function NomineesPage() {
   const handleEdit = (nominee: Nominee) => {
     setName(nominee.name)
     setEmail(nominee.email)
-    setPhone(nominee.phone)
+    setPhone(nominee.phone || "")
     setRelationship(nominee.relationship)
     setEditingId(nominee.id)
     setShowForm(true)
@@ -122,12 +120,16 @@ export default function NomineesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !email || !phone || !relationship) {
-      toast.error("Please fill in all fields")
+    if (!name.trim()) {
+      toast.error("Please enter nominee's full name")
       return
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      toast.error("Please enter a valid email")
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email.trim())) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+    if (!relationship) {
+      toast.error("Please select a relationship")
       return
     }
 
@@ -148,35 +150,44 @@ export default function NomineesPage() {
     }
 
     setLoading(true)
-    const userId = getCurrentUserId()
+    const userId = getCurrentUserId() || "me"
 
     try {
-      const nominee: Nominee = {
-        id: editingId || generateId(),
-        name,
-        email,
-        phone,
+      const nomineePayload: any = {
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
         relationship,
-        createdAt: editingId
-          ? nominees.find((n) => n.id === editingId)?.createdAt || new Date().toISOString()
-          : new Date().toISOString(),
+        userId: userId !== "me" ? userId : undefined,
+      }
+
+      if (editingId) {
+        nomineePayload.id = editingId
       }
 
       const response = await secureFetch("/nominees", {
         method: "POST",
-        body: JSON.stringify({ ...nominee, userId }),
+        body: JSON.stringify(nomineePayload),
       })
 
-      if (!response.ok) throw new Error("Failed to save nominee")
+      const resData = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(resData.error || resData.detail || "Failed to save nominee")
+      }
+
+      const savedId = resData.id || editingId
 
       // Save latest added nominee ID for auto-selection in asset creation
-      if (!editingId && typeof window !== "undefined") {
-        sessionStorage.setItem("sv_latest_added_nominee_id", nominee.id)
+      if (!editingId && savedId && typeof window !== "undefined") {
+        sessionStorage.setItem("sv_latest_added_nominee_id", savedId)
       }
 
       // Refresh list
       const nomineesRes = await secureFetch(`/nominees/${userId}`)
-      setNominees(await nomineesRes.json())
+      if (nomineesRes.ok) {
+        setNominees(await nomineesRes.json())
+      }
 
       const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null
       const returnTo = searchParams?.get("returnTo")
@@ -190,15 +201,15 @@ export default function NomineesPage() {
           router.push(returnTo)
         }, 600)
       }
-    } catch (error) {
-      toast.error("Error saving nominee")
+    } catch (error: any) {
+      toast.error(error.message || "Error saving nominee")
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    const userId = getCurrentUserId()
+    const userId = getCurrentUserId() || "me"
     try {
       const response = await secureFetch(`/nominees/${userId}/${id}`, {
         method: "DELETE"
@@ -233,7 +244,7 @@ export default function NomineesPage() {
             resetForm()
             setShowForm(true)
           }}
-          className="gap-2 bg-primary text-primary-foreground"
+          className="gap-2 bg-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity"
         >
           <UserPlus className="h-4 w-4" />
           Add Nominee
@@ -249,8 +260,9 @@ export default function NomineesPage() {
                 {editingId ? "Edit Nominee" : "Add Nominee"}
               </h2>
               <button
+                type="button"
                 onClick={resetForm}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground cursor-pointer p-1 rounded-lg hover:bg-secondary/40 transition-colors"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -259,42 +271,42 @@ export default function NomineesPage() {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label className="text-foreground">Full Name</Label>
+                <Label className="text-foreground font-medium">Full Name <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="Nominee's full name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-input border-border text-foreground"
+                  className="bg-input border-border text-foreground focus-visible:ring-primary"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-foreground">Email</Label>
+                <Label className="text-foreground font-medium">Email <span className="text-destructive">*</span></Label>
                 <Input
                   type="email"
                   placeholder="nominee@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-input border-border text-foreground"
+                  className="bg-input border-border text-foreground focus-visible:ring-primary"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-foreground">Phone</Label>
+                <Label className="text-foreground font-medium">Phone Number</Label>
                 <Input
-                  placeholder="+91 9876543210"
+                  placeholder="+91 9876543210 (optional)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="bg-input border-border text-foreground"
+                  className="bg-input border-border text-foreground focus-visible:ring-primary"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className="text-foreground">Relationship</Label>
+                <Label className="text-foreground font-medium">Relationship <span className="text-destructive">*</span></Label>
                 <Select value={relationship} onValueChange={setRelationship}>
-                  <SelectTrigger className="bg-input border-border text-foreground">
+                  <SelectTrigger className="bg-input border-border text-foreground w-full">
                     <SelectValue placeholder="Select relationship" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
+                  <SelectContent className="bg-card border-border z-[60]">
                     {relationships.map((r) => (
-                      <SelectItem key={r} value={r} className="text-foreground">
+                      <SelectItem key={r} value={r} className="text-foreground cursor-pointer hover:bg-secondary/40">
                         {r}
                       </SelectItem>
                     ))}
@@ -306,7 +318,7 @@ export default function NomineesPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 border-border text-foreground"
+                  className="flex-1 border-border text-foreground cursor-pointer hover:bg-secondary/40"
                   onClick={resetForm}
                 >
                   Cancel
@@ -314,19 +326,19 @@ export default function NomineesPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 gap-2 bg-primary text-primary-foreground"
+                  className="flex-1 gap-2 bg-primary text-primary-foreground cursor-pointer hover:opacity-90"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : editingId ? (
                     <>
                       <CheckCircle className="h-4 w-4" />
-                      Update
+                      Update Nominee
                     </>
                   ) : (
                     <>
                       <UserPlus className="h-4 w-4" />
-                      Add
+                      Add Nominee
                     </>
                   )}
                 </Button>
