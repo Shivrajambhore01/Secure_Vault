@@ -69,11 +69,10 @@ export function VaultActivityChart() {
             >
               <div
                 style={{ height: `${heightPercent}%` }}
-                className={`w-full rounded-sm sm:rounded-md transition-all duration-200 ${
-                  isPeak
+                className={`w-full rounded-sm sm:rounded-md transition-all duration-200 ${isPeak
                     ? "bg-[#2563EB] shadow-md shadow-blue-500/20 group-hover:scale-y-105"
                     : "bg-[#DBEAFE] hover:bg-[#93C5FD]"
-                }`}
+                  }`}
               />
             </div>
           );

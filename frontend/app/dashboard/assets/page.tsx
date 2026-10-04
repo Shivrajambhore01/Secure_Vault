@@ -18,17 +18,15 @@ import {
   StickyNote,
   Download,
   EyeOff,
-  ExternalLink,
-  ChevronRight,
   MoreVertical,
   X,
-  Link as LinkIcon,
   ShieldCheck,
+  Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { StatusBadge } from "@/components/ui/status-badge"
 import {
   Select,
@@ -97,24 +95,32 @@ export default function AssetsPage() {
 
   const fetchData = async () => {
     const userId = getCurrentUserId()
+    if (!userId) return
+
     try {
       const [assetsRes, nomineesRes] = await Promise.all([
         secureFetch(`/assets/${userId}`),
-        secureFetch(`/nominees/${userId}`)
+        secureFetch(`/nominees/${userId}`),
       ])
-      const assetsData = await assetsRes.json()
-      const nomineesData = await nomineesRes.json()
-      setAssets(assetsData)
-      setNominees(nomineesData)
-    } catch (error) {
-      toast.error("Failed to fetch data")
+      const assetsData = await assetsRes.json().catch(() => [])
+      const nomineesData = await nomineesRes.json().catch(() => [])
+
+      setAssets(Array.isArray(assetsData) ? assetsData : [])
+      setNominees(Array.isArray(nomineesData) ? nomineesData : [])
+    } catch {
+      toast.error("Failed to fetch vault assets")
+      setAssets([])
+      setNominees([])
     }
   }
 
-  const filteredAssets = assets.filter((a) => {
-    const matchesSearch =
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      (a.description?.toLowerCase().includes(search.toLowerCase()))
+  const safeAssets = Array.isArray(assets) ? assets : []
+  const filteredAssets = safeAssets.filter((a) => {
+    if (!a) return false
+    const nameStr = (a.name || "").toLowerCase()
+    const descStr = (a.description || "").toLowerCase()
+    const q = search.toLowerCase()
+    const matchesSearch = nameStr.includes(q) || descStr.includes(q)
     const matchesType = filterType === "all" || a.type === filterType
     return matchesSearch && matchesType
   })
@@ -125,20 +131,20 @@ export default function AssetsPage() {
 
     try {
       const response = await secureFetch(`/assets/${userId}/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
       })
       if (!response.ok) throw new Error("Failed to delete asset")
 
-      setAssets(assets.filter(a => a.id !== id))
+      setAssets((prev) => prev.filter((a) => a.id !== id))
       setDeleteId(null)
       toast.success("Asset deleted successfully")
-    } catch (error) {
+    } catch {
       toast.error("Error deleting asset")
     }
   }
 
   const togglePassword = (id: string) => {
-    setShowPassword(prev => ({ ...prev, [id]: !prev[id] }))
+    setShowPassword((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
   const getAssetUrl = (path: string) => `${API_BASE}${path}`
@@ -162,44 +168,46 @@ export default function AssetsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 pb-10 font-tt-norms font-sans text-black">
+    <div className="flex flex-col gap-8 pb-10 font-tt-norms font-sans text-zinc-100">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-black tracking-tight">Digital Vault</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Encrypted cryptographic assets, keys, and heritage directives.
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Digital Vault Assets</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Encrypted cryptographic assets, keys, and inheritable files.
           </p>
         </div>
         <Link href="/dashboard/assets/add">
-          <button className="group h-11 rounded-full bg-black hover:bg-neutral-800 text-white font-medium text-sm shadow-md flex items-center justify-center gap-2 px-6 transition-all active:scale-[0.98] cursor-pointer">
-            <PlusCircle className="h-4 w-4 text-white" />
-            <span>Add Secure Asset</span>
+          <button className="group h-11 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-sm shadow-md shadow-cyan-600/30 flex items-center justify-center gap-2 px-6 transition-all active:scale-[0.98] cursor-pointer">
+            <Plus className="h-4 w-4 text-white" />
+            <span>Add Secure File</span>
           </button>
         </Link>
       </div>
 
       {/* Control Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row bg-white p-3 rounded-2xl border border-black/8 shadow-2xs">
+      <div className="flex flex-col gap-3 sm:flex-row bg-[#161b22] p-3.5 rounded-2xl border border-zinc-800 shadow-lg">
         <div className="relative flex-1 group">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400 group-focus-within:text-black transition-colors" />
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 group-focus-within:text-cyan-400 transition-colors" />
           <Input
             placeholder="Search your vault by name or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-neutral-100/90 border-transparent hover:bg-neutral-100 focus:bg-white focus:border-black/20 text-black pl-10 text-xs h-10 rounded-full"
+            className="bg-[#0d1117] border-zinc-800 focus:border-cyan-500/50 text-white placeholder:text-zinc-500 pl-10 text-xs h-10 rounded-xl"
           />
         </div>
         <div className="flex gap-2">
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-[170px] h-10 rounded-full border border-black/15 bg-white text-black text-xs font-semibold px-4 shadow-2xs">
-              <Filter className="mr-2 h-3.5 w-3.5 text-neutral-500" />
+            <SelectTrigger className="w-[170px] h-10 rounded-xl border border-zinc-700 bg-[#0d1117] text-white text-xs font-bold px-4 shadow-inner">
+              <Filter className="mr-2 h-3.5 w-3.5 text-zinc-400" />
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
-            <SelectContent className="bg-white text-black border border-black/10 rounded-2xl shadow-xl">
+            <SelectContent className="bg-[#161b22] text-white border border-zinc-800 rounded-xl shadow-2xl">
               <SelectItem value="all">All Categories</SelectItem>
               {Object.entries(typeLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -213,52 +221,79 @@ export default function AssetsPage() {
             const Icon = typeIcons[asset.type] || FileText
             const assetNomineeIds = asset.nomineeIds || (asset.nomineeId ? [asset.nomineeId] : [])
             const assignedNominees = nominees.filter((n) => assetNomineeIds.includes(n.id))
-            const nomineeNames = assignedNominees.length > 0
-              ? assignedNominees.map((n) => n.name).join(", ")
-              : "Unassigned"
-            const isMedia = ["image", "video"].includes(asset.type)
+            const nomineeNames =
+              assignedNominees.length > 0
+                ? assignedNominees.map((n) => n.name).join(", ")
+                : "Unassigned"
             const isFile = !!asset.filePaths
 
             return (
               <Card
                 key={asset.id}
-                className="group flex flex-col justify-between bg-white border border-black/8 hover:border-black/15 shadow-sm rounded-3xl overflow-hidden transition-all duration-200 text-black"
+                className="group flex flex-col justify-between bg-[#161b22] border border-zinc-800 hover:border-zinc-700 shadow-lg rounded-2xl overflow-hidden transition-all duration-200 text-white"
               >
                 {/* Header: Icon, Title, Category and Dropdown Menu */}
-                <CardHeader className="flex items-center justify-between border-b border-black/5 p-5">
+                <CardHeader className="flex items-center justify-between border-b border-zinc-800 p-5">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-neutral-100 text-black border border-black/5 shadow-2xs">
-                      <Icon className="h-5 w-5 text-black" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-cyan-400 border border-zinc-700 shadow-inner">
+                      <Icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-[15px] font-bold text-black truncate max-w-[130px] sm:max-w-[150px]" title={asset.name}>{asset.name}</h3>
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mt-0.5">{typeLabels[asset.type]}</span>
+                      <h3
+                        className="text-[15px] font-bold text-white truncate max-w-[130px] sm:max-w-[150px]"
+                        title={asset.name}
+                      >
+                        {asset.name}
+                      </h3>
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mt-0.5">
+                        {typeLabels[asset.type] || "Asset"}
+                      </span>
                     </div>
                   </div>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white border-black/10 rounded-2xl shadow-xl text-black">
-                      <DropdownMenuItem onClick={() => setViewAsset(asset)} className="gap-2 cursor-pointer font-medium hover:bg-neutral-50">
-                        <Eye className="h-4 w-4 text-black" /> View Details
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-[#161b22] border-zinc-800 rounded-xl shadow-2xl text-white"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => setViewAsset(asset)}
+                        className="gap-2 cursor-pointer font-medium hover:bg-zinc-800 text-zinc-200 hover:text-white"
+                      >
+                        <Eye className="h-4 w-4 text-cyan-400" /> View Details
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/dashboard/assets/add?edit=${asset.id}`} className="gap-2 cursor-pointer flex items-center w-full font-medium hover:bg-neutral-50">
-                          <Pencil className="h-4 w-4 text-black" /> Edit Asset
+                        <Link
+                          href={`/dashboard/assets/add?edit=${asset.id}`}
+                          className="gap-2 cursor-pointer flex items-center w-full font-medium hover:bg-zinc-800 text-zinc-200 hover:text-white"
+                        >
+                          <Pencil className="h-4 w-4 text-amber-400" /> Edit Asset
                         </Link>
                       </DropdownMenuItem>
                       {isFile && (
                         <DropdownMenuItem asChild>
-                          <a href={getAssetUrl(asset.filePaths)} download className="gap-2 cursor-pointer flex items-center font-medium hover:bg-neutral-50">
-                            <Download className="h-4 w-4 text-black" /> Download
+                          <a
+                            href={getAssetUrl(asset.filePaths)}
+                            download
+                            className="gap-2 cursor-pointer flex items-center font-medium hover:bg-zinc-800 text-zinc-200 hover:text-white"
+                          >
+                            <Download className="h-4 w-4 text-emerald-400" /> Download
                           </a>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => setDeleteId(asset.id)} className="gap-2 cursor-pointer text-red-600 font-medium hover:bg-red-50">
+                      <DropdownMenuItem
+                        onClick={() => setDeleteId(asset.id)}
+                        className="gap-2 cursor-pointer text-rose-400 font-medium hover:bg-rose-500/10"
+                      >
                         <Trash2 className="h-4 w-4" /> Delete Asset
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -266,58 +301,76 @@ export default function AssetsPage() {
                 </CardHeader>
 
                 {/* Body Content */}
-                <CardContent className="flex flex-col gap-3.5 p-5 flex-grow text-black">
-                  <p className="line-clamp-2 text-xs text-neutral-500 leading-relaxed font-normal min-h-[32px]">
+                <CardContent className="flex flex-col gap-3.5 p-5 flex-grow text-zinc-200">
+                  <p className="line-clamp-2 text-xs text-zinc-400 leading-relaxed font-normal min-h-[32px]">
                     {asset.description || "No description provided."}
                   </p>
 
                   {asset.type === "password" && (
-                    <div className="flex items-center justify-between rounded-2xl bg-neutral-50 border border-black/8 p-3 mt-1">
-                      <code className="text-xs font-mono font-bold text-black truncate max-w-[140px]">
+                    <div className="flex items-center justify-between rounded-xl bg-[#0d1117] border border-zinc-800 p-3 mt-1">
+                      <code className="text-xs font-mono font-bold text-cyan-300 truncate max-w-[140px]">
                         {showPassword[asset.id] ? asset.content : "••••••••••••"}
                       </code>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-neutral-400 hover:text-black hover:bg-neutral-200/60 rounded-full"
-                        onClick={(e) => { e.stopPropagation(); togglePassword(asset.id); }}
+                        className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          togglePassword(asset.id)
+                        }}
                       >
-                        {showPassword[asset.id] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        {showPassword[asset.id] ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
                       </Button>
                     </div>
                   )}
 
                   {asset.type === "note" && (
-                    <div className="line-clamp-2 rounded-2xl bg-neutral-50 border border-black/8 p-3 text-[11px] italic text-neutral-700 leading-relaxed mt-1">
+                    <div className="line-clamp-2 rounded-xl bg-[#0d1117] border border-zinc-800 p-3 text-[11px] italic text-zinc-300 leading-relaxed mt-1">
                       &quot;{asset.content}&quot;
                     </div>
                   )}
 
                   {/* Metadata Indicators */}
-                  <div className="grid grid-cols-2 gap-3.5 border-t border-black/5 pt-3.5 mt-auto">
+                  <div className="grid grid-cols-2 gap-3.5 border-t border-zinc-800/80 pt-3.5 mt-auto">
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">Protection</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                        Protection
+                      </span>
                       <StatusBadge status="encrypted" className="px-2 py-0.5" />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">Last Updated</span>
-                      <span className="text-xs font-bold text-black block">{new Date(asset.createdAt).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                        Saved
+                      </span>
+                      <span className="text-xs font-bold text-zinc-200 block">
+                        {new Date(asset.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
 
                   {/* Nominees */}
-                  <div className="flex items-center gap-2 text-[11px] font-medium text-neutral-500 border-t border-black/5 pt-3">
-                    <div className="h-1.5 w-1.5 rounded-full bg-black shrink-0" />
-                    <span className="truncate">Nominee(s): <span className="font-bold text-black" title={nomineeNames}>{nomineeNames}</span></span>
+                  <div className="flex items-center gap-2 text-[11px] font-medium text-zinc-400 border-t border-zinc-800/80 pt-3">
+                    <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
+                    <span className="truncate">
+                      Nominee:{" "}
+                      <span className="font-bold text-zinc-200" title={nomineeNames}>
+                        {nomineeNames}
+                      </span>
+                    </span>
                   </div>
                 </CardContent>
 
                 {/* Footer Controls */}
-                <CardFooter className="flex justify-end gap-1.5 border-t border-black/5 py-2.5 px-5 bg-neutral-50/50">
+                <CardFooter className="flex justify-end gap-1.5 border-t border-zinc-800/80 py-2.5 px-5 bg-zinc-900/40">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-neutral-400 hover:text-black hover:bg-neutral-200/60 rounded-full"
+                    className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full"
                     onClick={() => setViewAsset(asset)}
                     title="View Details"
                   >
@@ -327,7 +380,7 @@ export default function AssetsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-neutral-400 hover:text-black hover:bg-neutral-200/60 rounded-full"
+                      className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full"
                       title="Edit Asset"
                     >
                       <Pencil className="h-4 w-4" />
@@ -338,7 +391,7 @@ export default function AssetsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-neutral-400 hover:text-black hover:bg-neutral-200/60 rounded-full"
+                        className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full"
                         title="Download File"
                       >
                         <Download className="h-4 w-4" />
@@ -348,7 +401,7 @@ export default function AssetsPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                    className="h-8 w-8 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-full"
                     onClick={() => setDeleteId(asset.id)}
                     title="Delete Asset"
                   >
@@ -360,24 +413,24 @@ export default function AssetsPage() {
           })}
         </div>
       ) : (
-        <div className="flex h-96 flex-col items-center justify-center gap-6 rounded-3xl border border-dashed border-black/15 bg-white p-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700 max-w-xl mx-auto shadow-sm text-black">
-          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-neutral-100 border border-black/8 shadow-2xs">
-            <FolderKey className="h-10 w-10 text-black" />
-            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black text-white shadow-sm">
-              <ShieldCheck className="h-3.5 w-3.5" />
+        <div className="flex h-96 flex-col items-center justify-center gap-6 rounded-3xl border border-dashed border-zinc-700/80 bg-[#161b22] p-8 text-center animate-in fade-in slide-in-from-bottom-5 duration-700 max-w-xl mx-auto shadow-xl text-white">
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-zinc-800 border border-zinc-700 shadow-inner">
+            <FolderKey className="h-10 w-10 text-cyan-400" />
+            <div className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-slate-950 shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5 font-bold" />
             </div>
           </div>
           <div className="space-y-2">
-            <h3 className="text-xl font-bold text-black">No Vaults Yet</h3>
-            <p className="text-sm text-neutral-500 max-w-sm mx-auto leading-relaxed">
+            <h3 className="text-xl font-bold text-white">No Assets Found</h3>
+            <p className="text-sm text-zinc-400 max-w-sm mx-auto leading-relaxed">
               {search || filterType !== "all"
-                ? "We couldn't find any vaults matching your search query or category filters. Try expanding your search options."
-                : "Your digital legacy starts here. Create a secure vault to encrypt and guard your critical credentials, files, and keys."}
+                ? "We couldn't find any assets matching your search query or filters."
+                : "Your digital vault is ready. Upload critical documents, passwords, or files to encrypt and protect them."}
             </p>
           </div>
           {!search && filterType === "all" && (
             <Link href="/dashboard/assets/add">
-              <Button size="lg" className="rounded-full bg-black text-white hover:bg-neutral-800 font-bold px-8 shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all">
+              <Button size="lg" className="rounded-xl bg-cyan-600 text-white hover:bg-cyan-500 font-bold px-8 shadow-lg shadow-cyan-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all">
                 Add Your First Asset
               </Button>
             </Link>
@@ -388,23 +441,23 @@ export default function AssetsPage() {
       {/* Asset Detail View Modal */}
       {viewAsset && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setViewAsset(null)}
         >
           <div
-            className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-black/10 bg-white shadow-2xl animate-in zoom-in-95 duration-300 text-black"
+            className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-zinc-800 bg-[#161b22] shadow-2xl animate-in zoom-in-95 duration-300 text-white"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setViewAsset(null)}
-              className="absolute right-4 top-4 z-10 rounded-full bg-neutral-100 p-2 text-neutral-500 hover:bg-neutral-200 hover:text-black transition-all"
+              className="absolute right-4 top-4 z-10 rounded-full bg-zinc-800 p-2 text-zinc-400 hover:bg-zinc-700 hover:text-white transition-all"
             >
               <X className="h-5 w-5" />
             </button>
 
             <div className="grid md:grid-cols-2">
               {/* Preview Side */}
-              <div className="bg-neutral-50 flex items-center justify-center border-r border-black/5 p-6">
+              <div className="bg-[#0d1117] flex items-center justify-center border-r border-zinc-800 p-6">
                 {viewAsset.type === "image" && viewAsset.filePaths ? (
                   <img
                     src={getAssetUrl(viewAsset.filePaths)}
@@ -420,13 +473,15 @@ export default function AssetsPage() {
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-4 py-12">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-neutral-100 text-black border border-black/8 shadow-2xs">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-zinc-800 text-cyan-400 border border-zinc-700 shadow-inner">
                       {(() => {
                         const VIcon = typeIcons[viewAsset.type] || FileText
-                        return <VIcon className="h-10 w-10 text-black" />
+                        return <VIcon className="h-10 w-10" />
                       })()}
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">{typeLabels[viewAsset.type]}</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      {typeLabels[viewAsset.type]}
+                    </span>
                   </div>
                 )}
               </div>
@@ -434,8 +489,8 @@ export default function AssetsPage() {
               {/* Data Side */}
               <div className="p-8 flex flex-col gap-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-black leading-tight">{viewAsset.name}</h2>
-                  <p className="mt-2 text-sm text-neutral-600 leading-relaxed italic border-l-2 border-black/20 pl-3">
+                  <h2 className="text-2xl font-bold text-white leading-tight">{viewAsset.name}</h2>
+                  <p className="mt-2 text-sm text-zinc-300 leading-relaxed italic border-l-2 border-cyan-500/40 pl-3">
                     {viewAsset.description || "No description provided."}
                   </p>
                 </div>
@@ -443,52 +498,75 @@ export default function AssetsPage() {
                 <div className="space-y-4">
                   {/* Content for text-based */}
                   {viewAsset.content && (
-                    <div className="rounded-2xl border border-black/8 bg-neutral-50 p-4">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2 block">
+                    <div className="rounded-xl border border-zinc-800 bg-[#0d1117] p-4">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">
                         {viewAsset.type === "password" ? "Encrypted Password" : "Secure Note"}
                       </Label>
                       {viewAsset.type === "password" ? (
                         <div className="flex items-center justify-between gap-2">
-                          <code className="text-sm font-mono font-bold text-black break-all">
+                          <code className="text-sm font-mono font-bold text-cyan-300 break-all">
                             {showPassword[viewAsset.id] ? viewAsset.content : "••••••••••••••••"}
                           </code>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 shrink-0 rounded-full border-black/15 hover:bg-neutral-100"
+                            className="h-8 w-8 shrink-0 rounded-full border-zinc-700 hover:bg-zinc-800"
                             onClick={() => togglePassword(viewAsset.id)}
                           >
                             {showPassword[viewAsset.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
                         </div>
                       ) : (
-                        <p className="text-sm text-black whitespace-pre-wrap">{viewAsset.content}</p>
+                        <p className="text-sm text-zinc-200 whitespace-pre-wrap">{viewAsset.content}</p>
                       )}
                     </div>
                   )}
 
                   {/* Metadata List */}
                   <div className="grid gap-3 text-sm">
-                    <div className="flex justify-between border-b border-black/5 pb-2">
-                      <span className="text-neutral-500 flex items-center gap-2"><KeyRound className="h-3.5 w-3.5" /> Security</span>
-                      <span className="font-semibold text-emerald-700 flex items-center gap-1.5"><FileCheck className="h-3.5 w-3.5" /> AES-256-GCM</span>
+                    <div className="flex justify-between border-b border-zinc-800 pb-2">
+                      <span className="text-zinc-400 flex items-center gap-2">
+                        <KeyRound className="h-3.5 w-3.5 text-cyan-400" /> Security
+                      </span>
+                      <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                        <FileCheck className="h-3.5 w-3.5" /> AES-256-GCM
+                      </span>
                     </div>
                     {viewAsset.filePaths && (
-                      <div className="flex justify-between border-b border-black/5 pb-2">
-                        <span className="text-neutral-500 flex items-center gap-2"><Download className="h-3.5 w-3.5" /> Size</span>
-                        <span className="font-medium text-black">{formatBytes(viewAsset.fileSize || 0)}</span>
+                      <div className="flex justify-between border-b border-zinc-800 pb-2">
+                        <span className="text-zinc-400 flex items-center gap-2">
+                          <Download className="h-3.5 w-3.5 text-cyan-400" /> Size
+                        </span>
+                        <span className="font-medium text-white">{formatBytes(viewAsset.fileSize || 0)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between border-b border-black/5 pb-2">
-                      <span className="text-neutral-500 flex items-center gap-2"><ImageIcon className="h-3.5 w-3.5" /> Beneficiary(ies)</span>
-                      <span className="font-medium text-black text-right max-w-[200px] truncate" title={(() => {
-                        const assetNomineeIds = viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
-                        return nominees.filter((n) => assetNomineeIds.includes(n.id)).map((n) => n.name).join(", ")
-                      })() || "Not set"}>
+                    <div className="flex justify-between border-b border-zinc-800 pb-2">
+                      <span className="text-zinc-400 flex items-center gap-2">
+                        <ImageIcon className="h-3.5 w-3.5 text-cyan-400" /> Beneficiary
+                      </span>
+                      <span
+                        className="font-medium text-white text-right max-w-[200px] truncate"
+                        title={
+                          (() => {
+                            const assetNomineeIds =
+                              viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
+                            return nominees
+                              .filter((n) => assetNomineeIds.includes(n.id))
+                              .map((n) => n.name)
+                              .join(", ")
+                          })() || "Not set"
+                        }
+                      >
                         {(() => {
-                          const assetNomineeIds = viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
-                          return nominees.filter((n) => assetNomineeIds.includes(n.id)).map((n) => n.name).join(", ")
-                        })() || "Not set"}
+                          const assetNomineeIds =
+                            viewAsset.nomineeIds || (viewAsset.nomineeId ? [viewAsset.nomineeId] : [])
+                          return (
+                            nominees
+                              .filter((n) => assetNomineeIds.includes(n.id))
+                              .map((n) => n.name)
+                              .join(", ") || "Not set"
+                          )
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -496,17 +574,27 @@ export default function AssetsPage() {
 
                 <div className="mt-auto grid grid-cols-2 gap-3">
                   {viewAsset.filePaths ? (
-                    <Button size="lg" className="w-full gap-2 rounded-full font-bold bg-black text-white hover:bg-neutral-800" asChild>
+                    <Button size="lg" className="w-full gap-2 rounded-xl font-bold bg-cyan-600 hover:bg-cyan-500 text-white" asChild>
                       <a href={getAssetUrl(viewAsset.filePaths)} download>
                         <Download className="h-4 w-4" /> Download
                       </a>
                     </Button>
                   ) : (
-                    <Button size="lg" variant="outline" className="w-full gap-2 rounded-full border-black/15 font-bold text-black hover:bg-neutral-100" onClick={() => toast.info("Encryption detail: SHA-256 Verified")}>
-                      <FileCheck className="h-4 w-4 text-black" /> Verified
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full gap-2 rounded-xl border-zinc-700 font-bold text-zinc-200 hover:bg-zinc-800"
+                      onClick={() => toast.info("Encryption detail: SHA-256 Verified")}
+                    >
+                      <FileCheck className="h-4 w-4 text-emerald-400" /> Verified
                     </Button>
                   )}
-                  <Button size="lg" variant="secondary" className="w-full gap-2 rounded-full font-bold bg-neutral-100 text-black hover:bg-neutral-200" onClick={() => setViewAsset(null)}>
+                  <Button
+                    size="lg"
+                    variant="secondary"
+                    className="w-full gap-2 rounded-xl font-bold bg-zinc-800 text-white hover:bg-zinc-700"
+                    onClick={() => setViewAsset(null)}
+                  >
                     Close
                   </Button>
                 </div>
@@ -518,18 +606,21 @@ export default function AssetsPage() {
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent className="bg-card border-border border-2 animate-in slide-in-from-bottom-5">
+        <AlertDialogContent className="bg-[#161b22] border-zinc-800 text-white border-2 animate-in slide-in-from-bottom-5">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold">Safely Remove Asset?</AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground text-base">
-              This will permanently delete this asset from the secure vault. This action <span className="text-destructive font-bold underline">cannot be undone</span>.
+            <AlertDialogTitle className="text-2xl font-bold text-white">Safely Remove Asset?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400 text-base">
+              This will permanently delete this asset from the secure vault. This action{" "}
+              <span className="text-rose-400 font-bold underline">cannot be undone</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 mt-4">
-            <AlertDialogCancel className="rounded-xl border-border hover:bg-secondary">Keep Asset</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700">
+              Keep Asset
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && handleDelete(deleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl px-8"
+              className="bg-rose-600 text-white hover:bg-rose-500 rounded-xl px-8 font-bold"
             >
               Yes, Delete
             </AlertDialogAction>

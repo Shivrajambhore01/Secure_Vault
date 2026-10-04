@@ -35,7 +35,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold text-neutral-800 tracking-wide"
+            className="block text-xs font-semibold text-zinc-300 tracking-wide"
           >
             {label}
           </label>
@@ -43,7 +43,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3.5 text-neutral-400 pointer-events-none flex items-center">
+            <div className="absolute left-3.5 text-zinc-400 pointer-events-none flex items-center">
               {leftIcon}
             </div>
           )}
@@ -52,12 +52,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             type={isPassword ? (showPassword ? "text" : "password") : type}
-            className={`w-full rounded-full bg-white border border-black/15 transition-all text-black placeholder-neutral-400 text-sm px-4 py-2.5 outline-none focus:border-black focus:ring-2 focus:ring-black/10 shadow-2xs ${
+            className={`w-full rounded-xl bg-zinc-900 border border-zinc-700 transition-all text-white placeholder-zinc-500 text-sm px-4 py-2.5 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 shadow-inner ${
               leftIcon ? "pl-10" : ""
             } ${isPassword || rightIcon ? "pr-10" : ""} ${
               error
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : "focus:border-black"
+                : "focus:border-cyan-500"
             } ${className}`}
             {...props}
           />
@@ -66,13 +66,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 text-neutral-400 hover:text-black focus:outline-none transition-colors"
+              className="absolute right-3.5 text-zinc-400 hover:text-white focus:outline-none transition-colors"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           ) : (
             rightIcon && (
-              <div className="absolute right-3.5 text-neutral-400 pointer-events-none flex items-center">
+              <div className="absolute right-3.5 text-zinc-400 pointer-events-none flex items-center">
                 {rightIcon}
               </div>
             )
@@ -80,9 +80,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         </div>
 
         {error ? (
-          <p className="text-xs text-red-600 font-medium">{error}</p>
+          <p className="text-xs text-red-400 font-medium">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-neutral-500">{helperText}</p>
+          <p className="text-xs text-zinc-400">{helperText}</p>
         ) : null}
       </div>
     );
