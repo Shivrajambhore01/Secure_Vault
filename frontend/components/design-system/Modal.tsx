@@ -50,34 +50,34 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Card */}
       <div
-        className={`relative w-full ${widthStyles[maxWidth]} rounded-3xl bg-white border border-black/10 shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200 text-black`}
+        className={`relative w-full ${widthStyles[maxWidth]} rounded-3xl bg-[#161b22] border border-zinc-800 shadow-2xl overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200 text-white`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-black/5">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
           <div>
-            {title && <h3 className="text-xl font-bold text-black">{title}</h3>}
-            {description && <p className="text-xs text-neutral-500 mt-1">{description}</p>}
+            {title && <h3 className="text-xl font-bold text-white">{title}</h3>}
+            {description && <p className="text-xs text-zinc-400 mt-1">{description}</p>}
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors"
+            className="rounded-full p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-5 max-h-[75vh] overflow-y-auto text-black">{children}</div>
+        <div className="px-6 py-5 max-h-[75vh] overflow-y-auto text-zinc-200">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-neutral-50/50 border-t border-black/5">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 bg-zinc-900/60 border-t border-zinc-800">
             {footer}
           </div>
         )}

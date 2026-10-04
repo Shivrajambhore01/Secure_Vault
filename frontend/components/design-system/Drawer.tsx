@@ -47,27 +47,27 @@ export const Drawer: React.FC<DrawerProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       <div
-        className={`fixed ${sideStyles[side]} w-full ${widthStyles[width]} bg-white border-l border-black/10 shadow-2xl flex flex-col z-10 text-black`}
+        className={`fixed ${sideStyles[side]} w-full ${widthStyles[width]} bg-[#161b22] border-l border-zinc-800 shadow-2xl flex flex-col z-10 text-white`}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-black/5">
-          <h3 className="text-xl font-bold text-black">{title}</h3>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-800">
+          <h3 className="text-xl font-bold text-white">{title}</h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors"
+            className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 text-black">{children}</div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 text-zinc-200">{children}</div>
 
         {footer && (
-          <div className="px-6 py-4 border-t border-black/5 bg-neutral-50/50">{footer}</div>
+          <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900/60">{footer}</div>
         )}
       </div>
     </div>

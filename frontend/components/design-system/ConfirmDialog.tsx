@@ -34,9 +34,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClose={onClose}
       maxWidth="sm"
       title={
-        <div className="flex items-center gap-2 text-black">
+        <div className="flex items-center gap-2 text-white">
           <AlertTriangle
-            className={`w-5 h-5 ${variant === "danger" ? "text-red-600" : "text-black"}`}
+            className={`w-5 h-5 ${variant === "danger" ? "text-rose-400" : "text-cyan-400"}`}
           />
           <span className="font-bold">{title}</span>
         </div>
@@ -57,7 +57,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </>
       }
     >
-      <p className="text-sm text-neutral-600 leading-relaxed">{description}</p>
+      <p className="text-sm text-zinc-300 leading-relaxed">{description}</p>
     </Modal>
   );
 };

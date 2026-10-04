@@ -307,14 +307,14 @@ export default function AddAssetPage() {
 
   if (success) {
     return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4 animate-in fade-in zoom-in-95 duration-500 font-tt-norms font-sans text-black">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200">
-          <CheckCircle className="h-10 w-10 text-emerald-600" />
+      <div className="flex h-96 flex-col items-center justify-center gap-4 animate-in fade-in zoom-in-95 duration-500 font-tt-norms font-sans text-zinc-100">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/30 shadow-inner">
+          <CheckCircle className="h-10 w-10 text-emerald-400" />
         </div>
-        <h2 className="text-2xl font-bold text-black">
+        <h2 className="text-2xl font-bold text-white">
           {editId ? "Asset Updated!" : "Asset Secured!"}
         </h2>
-        <p className="text-sm text-neutral-500 text-center max-w-xs">
+        <p className="text-sm text-zinc-400 text-center max-w-xs leading-relaxed">
           {editId 
             ? "Your changes have been encrypted and updated in your secure vault."
             : "Your asset has been encrypted and stored in your secure vault."}
@@ -324,31 +324,31 @@ export default function AddAssetPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8 font-tt-norms font-sans text-black">
+    <div className="mx-auto max-w-2xl px-4 py-8 font-tt-norms font-sans text-zinc-100">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-black tracking-tight">
+        <h1 className="text-3xl font-bold text-white tracking-tight">
           {editId ? "Edit Digital Asset" : "Add Digital Asset"}
         </h1>
-        <p className="mt-2 text-sm text-neutral-500">
+        <p className="mt-2 text-sm text-zinc-400">
           {editId 
             ? "Modify your secured documents, credentials, or nominees."
             : "Securely encrypt and store documents, media, or credentials."}
         </p>
       </div>
 
-      <div className="bg-white border border-black/8 rounded-3xl p-7 sm:p-8 shadow-sm space-y-6 text-black">
-        <div className="border-b border-black/5 pb-4">
-          <h2 className="text-xl font-bold text-black">
+      <div className="bg-[#161b22] border border-zinc-800 rounded-3xl p-7 sm:p-8 shadow-xl space-y-6 text-zinc-100">
+        <div className="border-b border-zinc-800 pb-4">
+          <h2 className="text-xl font-bold text-white">
             {editId ? "Update Asset Details" : "Asset Configuration"}
           </h2>
-          <p className="text-xs text-neutral-500 mt-1">Configure encryption parameters and beneficiary access control</p>
+          <p className="text-xs text-zinc-400 mt-1">Configure encryption parameters and beneficiary access control</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
           {/* Asset Type Select */}
           <div className="grid gap-2">
-            <Label className="text-sm font-semibold text-black">Asset Category</Label>
+            <Label className="text-sm font-semibold text-zinc-200">Asset Category</Label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {assetTypes.map((t) => {
                 const Icon = t.icon
@@ -365,11 +365,11 @@ export default function AddAssetPage() {
                       editId ? "" : "hover:scale-[1.02]"
                     } ${
                       isActive
-                        ? "border-black bg-black text-white shadow-md ring-2 ring-black/10"
-                        : "border-black/8 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-black/20"
+                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 shadow-md ring-1 ring-emerald-500/30"
+                        : "border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:bg-zinc-800/80 hover:text-white hover:border-zinc-700"
                     }`}
                   >
-                    <Icon className={`h-6 w-6 ${isActive ? "text-white" : "text-neutral-600"}`} />
+                    <Icon className={`h-6 w-6 ${isActive ? "text-emerald-400" : "text-zinc-400"}`} />
                     <span className="text-xs font-semibold">{t.label}</span>
                   </button>
                 )
@@ -378,20 +378,20 @@ export default function AddAssetPage() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="name" className="text-sm font-semibold text-black">Asset Name</Label>
+            <Label htmlFor="name" className="text-sm font-semibold text-zinc-200">Asset Name</Label>
             <Input
               id="name"
               placeholder="Give your asset a clear name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-neutral-50 border-black/10 text-black placeholder:text-neutral-400 focus:bg-white focus:border-black rounded-xl h-11"
+              className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:bg-zinc-950 focus:border-emerald-500 rounded-xl h-11"
             />
           </div>
 
           {/* Content for text-based assets */}
           {["password", "note"].includes(type) && (
             <div className="grid gap-2 animate-in slide-in-from-top-2 duration-300">
-              <Label htmlFor="content" className="text-sm font-semibold text-black">{type === "password" ? "Secure Password" : "Note Content"}</Label>
+              <Label htmlFor="content" className="text-sm font-semibold text-zinc-200">{type === "password" ? "Secure Password" : "Note Content"}</Label>
               {type === "password" ? (
                 <Input
                   id="content"
@@ -399,7 +399,7 @@ export default function AddAssetPage() {
                   placeholder="Enter your sensitive password"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="bg-neutral-50 border-black/10 text-black placeholder:text-neutral-400 focus:bg-white focus:border-black rounded-xl h-11"
+                  className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:bg-zinc-950 focus:border-emerald-500 rounded-xl h-11"
                 />
               ) : (
                 <Textarea
@@ -407,7 +407,7 @@ export default function AddAssetPage() {
                   placeholder="Type your notes here..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="bg-neutral-50 border-black/10 text-black placeholder:text-neutral-400 focus:bg-white focus:border-black rounded-xl min-h-[150px]"
+                  className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:bg-zinc-950 focus:border-emerald-500 rounded-xl min-h-[150px]"
                 />
               )}
             </div>
@@ -416,7 +416,7 @@ export default function AddAssetPage() {
           {/* File Upload for media-based assets */}
           {["image", "video", "document", "legal-file"].includes(type) && (
             <div className="grid gap-2 animate-in slide-in-from-top-2 duration-300">
-              <Label className="text-sm font-semibold text-black">File Upload</Label>
+              <Label className="text-sm font-semibold text-zinc-200">File Upload</Label>
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -425,8 +425,8 @@ export default function AddAssetPage() {
                 onClick={() => fileInputRef.current?.click()}
                 className={`relative flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed p-10 transition-all duration-250 ${
                   dragActive
-                    ? "border-black bg-neutral-100 scale-[1.01]"
-                    : "border-black/15 bg-neutral-50/80 hover:border-black/30 hover:bg-neutral-100/60"
+                    ? "border-emerald-500 bg-emerald-500/10 scale-[1.01]"
+                    : "border-zinc-700 bg-zinc-900/40 hover:border-emerald-500/50 hover:bg-zinc-900/80"
                 }`}
               >
                 <input
@@ -444,7 +444,7 @@ export default function AddAssetPage() {
                 {file ? (
                   <div className="flex w-full flex-col items-center gap-3">
                     {previewUrl ? (
-                      <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-black/10 shadow-sm">
+                      <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-zinc-700 shadow-md">
                         <img
                           src={previewUrl}
                           alt="preview"
@@ -452,13 +452,13 @@ export default function AddAssetPage() {
                         />
                       </div>
                     ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-black text-white">
-                        <CheckCircle className="h-6 w-6 text-white" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
+                        <CheckCircle className="h-6 w-6" />
                       </div>
                     )}
                     <div className="text-center min-w-0 max-w-full">
-                      <p className="text-xs font-bold text-black truncate max-w-[240px]">{file.name}</p>
-                      <p className="text-[10px] text-neutral-500 mt-0.5 font-bold">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-xs font-bold text-white truncate max-w-[240px]">{file.name}</p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5 font-bold">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                     
                     <Button
@@ -466,7 +466,7 @@ export default function AddAssetPage() {
                       variant="ghost"
                       size="sm"
                       onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                      className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full gap-1.5 h-8 px-4 border border-transparent"
+                      className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-full gap-1.5 h-8 px-4 border border-transparent"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Remove File
@@ -474,16 +474,16 @@ export default function AddAssetPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-black/8 text-black shadow-2xs group-hover:scale-105 transition-transform duration-300">
-                      <Upload className="h-6 w-6 text-black" />
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800 border border-zinc-700 text-emerald-400 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                      <Upload className="h-6 w-6" />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm font-semibold text-black">Drop your {type} here</p>
-                      <p className="text-[11px] text-neutral-500 mt-1">
+                      <p className="text-sm font-semibold text-white">Drop your {type} here</p>
+                      <p className="text-[11px] text-zinc-400 mt-1">
                         {editId ? "or click to browse to replace current file" : "or click to browse from local storage"}
                       </p>
                       {editId && (
-                        <p className="text-[10px] text-neutral-700 mt-1.5 font-bold uppercase tracking-wider bg-neutral-100 border border-black/10 px-2.5 py-0.5 rounded-full inline-block">
+                        <p className="text-[10px] text-emerald-400 mt-1.5 font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full inline-block">
                           Current file is secured
                         </p>
                       )}
@@ -495,26 +495,26 @@ export default function AddAssetPage() {
           )}
 
           <div className="grid gap-2">
-            <Label htmlFor="description" className="text-sm font-semibold text-black">Description (Optional)</Label>
+            <Label htmlFor="description" className="text-sm font-semibold text-zinc-200">Description (Optional)</Label>
             <Textarea
               id="description"
               placeholder="Add some context or tags..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="bg-neutral-50 border-black/10 text-black placeholder:text-neutral-400 focus:bg-white focus:border-black rounded-xl h-20"
+              className="bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:bg-zinc-950 focus:border-emerald-500 rounded-xl h-20"
             />
           </div>
 
           <div className="grid gap-2">
-            <Label className="text-sm font-semibold text-black">Assign Beneficiaries (Nominees)</Label>
+            <Label className="text-sm font-semibold text-zinc-200">Assign Beneficiaries (Nominees)</Label>
             {nominees.length > 0 ? (
-              <div className="grid gap-2 border border-black/8 bg-neutral-50 rounded-2xl p-4 max-h-[160px] overflow-y-auto">
+              <div className="grid gap-2 border border-zinc-800 bg-zinc-900/60 rounded-2xl p-4 max-h-[160px] overflow-y-auto">
                 {nominees.map((n) => {
                   const isChecked = selectedNomineeIds.includes(n.id)
                   return (
                     <label
                       key={n.id}
-                      className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors"
+                      className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-zinc-800/70 transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -526,17 +526,17 @@ export default function AddAssetPage() {
                             setSelectedNomineeIds(selectedNomineeIds.filter(id => id !== n.id))
                           }
                         }}
-                        className="h-4 w-4 rounded border-neutral-300 text-black focus:ring-black"
+                        className="h-4 w-4 rounded border-zinc-700 bg-zinc-800 text-emerald-500 focus:ring-emerald-500"
                       />
-                      <span className="text-sm font-medium text-black">{n.name} <span className="text-neutral-500 font-normal">({n.email})</span></span>
+                      <span className="text-sm font-medium text-white">{n.name} <span className="text-zinc-400 font-normal">({n.email})</span></span>
                     </label>
                   )
                 })}
               </div>
             ) : (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col gap-2">
-                <p className="text-sm font-semibold text-amber-900">No Beneficiaries Found</p>
-                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-black font-bold underline" onClick={handleRedirectToAddNominee}>
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 flex flex-col gap-2">
+                <p className="text-sm font-semibold text-amber-300">No Beneficiaries Found</p>
+                <Button variant="link" size="sm" className="h-auto p-0 justify-start text-emerald-400 hover:text-emerald-300 font-bold underline" onClick={handleRedirectToAddNominee}>
                   Add a beneficiary first →
                 </Button>
               </div>
@@ -545,18 +545,18 @@ export default function AddAssetPage() {
 
           {loading && (
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-black">
+              <div className="flex justify-between text-xs font-semibold text-zinc-300">
                 <span>Securing & Uploading...</span>
                 <span>{Math.round(uploadProgress)}%</span>
               </div>
-              <Progress value={uploadProgress} className="h-1.5" />
+              <Progress value={uploadProgress} className="h-1.5 bg-zinc-800" />
             </div>
           )}
 
           <Button
             type="submit"
             disabled={loading || nominees.length === 0}
-            className="w-full h-12 rounded-full font-bold bg-black text-white hover:bg-neutral-800 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+            className="w-full h-12 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-950/40 active:scale-[0.98] cursor-pointer"
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />

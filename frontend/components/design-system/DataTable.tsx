@@ -94,19 +94,19 @@ export function DataTable<T extends Record<string, any>>({
               setCurrentPage(1);
               onSearch?.(e.target.value);
             }}
-            leftIcon={<Search className="w-4 h-4" />}
+            leftIcon={<Search className="w-4 h-4 text-zinc-400" />}
           />
         </div>
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-zinc-400">
           Showing {paginatedData.length} of {sortedData.length} items
         </div>
       </div>
 
       {/* Table Card */}
-      <div className="rounded-2xl border border-black/8 bg-white overflow-hidden shadow-sm">
+      <div className="rounded-2xl border border-zinc-800 bg-[#161b22] overflow-hidden shadow-lg">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-black">
-            <thead className="bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-500 border-b border-black/5">
+          <table className="w-full text-left text-sm text-white">
+            <thead className="bg-zinc-900/90 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
               <tr>
                 {columns.map((col, idx) => {
                   const key = String(col.accessorKey || idx);
@@ -115,16 +115,16 @@ export function DataTable<T extends Record<string, any>>({
                       key={key}
                       onClick={() => col.sortable && handleSort(col.accessorKey as string)}
                       className={`px-4 py-3.5 select-none ${
-                        col.sortable ? "cursor-pointer hover:text-black" : ""
+                        col.sortable ? "cursor-pointer hover:text-white" : ""
                       } ${col.className || ""}`}
                     >
                       <div className="flex items-center gap-1.5">
                         <span>{col.header}</span>
                         {col.sortable && sortField === col.accessorKey && (
                           sortOrder === "asc" ? (
-                            <ChevronUp className="w-3.5 h-3.5 text-black" />
+                            <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
                           ) : (
-                            <ChevronDown className="w-3.5 h-3.5 text-black" />
+                            <ChevronDown className="w-3.5 h-3.5 text-cyan-400" />
                           )
                         )}
                       </div>
@@ -133,7 +133,7 @@ export function DataTable<T extends Record<string, any>>({
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5">
+            <tbody className="divide-y divide-zinc-800/80">
               {paginatedData.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="py-12">
@@ -145,12 +145,12 @@ export function DataTable<T extends Record<string, any>>({
                   <tr
                     key={row.id || rowIdx}
                     onClick={() => onRowClick?.(row)}
-                    className={`hover:bg-neutral-50 transition-colors ${
+                    className={`hover:bg-zinc-900/60 transition-colors ${
                       onRowClick ? "cursor-pointer" : ""
                     }`}
                   >
                     {columns.map((col, colIdx) => (
-                      <td key={colIdx} className={`px-4 py-3 text-black ${col.className || ""}`}>
+                      <td key={colIdx} className={`px-4 py-3 text-zinc-200 ${col.className || ""}`}>
                         {col.cell
                           ? col.cell(row)
                           : col.accessorKey
@@ -167,7 +167,7 @@ export function DataTable<T extends Record<string, any>>({
 
         {/* Pagination Bar */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-black/5 bg-neutral-50/50 text-xs text-neutral-600">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-800 bg-zinc-900/60 text-xs text-zinc-400">
             <div>
               Page {currentPage} of {totalPages}
             </div>
@@ -175,14 +175,14 @@ export function DataTable<T extends Record<string, any>>({
               <button
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-black/10 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-black"
+                className="p-1.5 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-lg border border-black/10 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-black"
+                className="p-1.5 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-white"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

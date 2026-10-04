@@ -92,9 +92,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Fixed-Position Compact Dark Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#111111] px-5 py-6 transition-all duration-300 lg:static lg:h-full lg:w-56 xl:w-60 shrink-0 justify-between overflow-y-auto ${
-          sidebarOpen ? "translate-x-0 w-64 shadow-2xl" : "-translate-x-full lg:translate-x-0"
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#111111] px-5 py-6 transition-all duration-300 lg:static lg:h-full lg:w-56 xl:w-60 shrink-0 justify-between overflow-y-auto ${sidebarOpen ? "translate-x-0 w-64 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+          }`}
       >
         <div className="space-y-8">
           {/* User Profile Header */}
@@ -142,16 +141,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`group flex items-center justify-between py-2 px-3 rounded-2xl transition-all duration-200 ease-out cursor-pointer ${
-                    active
+                  className={`group flex items-center justify-between py-2 px-3 rounded-2xl transition-all duration-200 ease-out cursor-pointer ${active
                       ? "bg-white/[0.08] text-white font-bold text-base sm:text-[17px] tracking-tight translate-x-1"
                       : "text-neutral-400 hover:text-white font-semibold text-sm sm:text-[15px] hover:translate-x-2 hover:bg-white/[0.05]"
-                  }`}
+                    }`}
                 >
                   <span className="transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
                     {item.label}
                   </span>
-                  
+
                   {/* Subtle active/hover bullet indicator */}
                   {active ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs shadow-white" />
@@ -188,9 +186,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <span className="text-xs font-semibold">{pinVerified ? "PIN Active" : "Verify PIN"}</span>
             </span>
             <span
-              className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                pinVerified ? "bg-emerald-950/90 text-emerald-300 border border-emerald-800/50" : "bg-neutral-800 text-neutral-300"
-              }`}
+              className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold ${pinVerified ? "bg-emerald-950/90 text-emerald-300 border border-emerald-800/50" : "bg-neutral-800 text-neutral-300"
+                }`}
             >
               {pinVerified ? "Unlocked" : "Locked"}
             </span>
@@ -216,25 +213,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Floating White Island - Fixed Height Viewport with its own Scroll Container */}
-      <div className="h-full flex-1 bg-white text-black rounded-[24px] sm:rounded-[32px] lg:rounded-[36px] shadow-2xl overflow-hidden min-w-0 flex flex-col border border-white/5 relative">
+      {/* Floating Dark Island - Fixed Height Viewport with its own Scroll Container */}
+      <div className="h-full flex-1 bg-[#0d1117] text-white rounded-[24px] sm:rounded-[32px] lg:rounded-[36px] shadow-2xl overflow-hidden min-w-0 flex flex-col border border-zinc-800 relative">
         {/* Subtle Top Island Header with Search & PIN Status */}
-        <header className="flex h-14 shrink-0 items-center justify-between px-5 sm:px-7 border-b border-black/5 bg-white/95 backdrop-blur-sm sticky top-0 z-20">
+        <header className="flex h-14 shrink-0 items-center justify-between px-5 sm:px-7 border-b border-zinc-800/80 bg-[#0d1117]/95 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <button
-              className="lg:hidden text-neutral-700 p-1.5 rounded-full hover:bg-neutral-100 transition cursor-pointer"
+              className="lg:hidden text-zinc-400 p-1.5 rounded-full hover:bg-zinc-800 hover:text-white transition cursor-pointer"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open sidebar"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Subtle Search Pill */}
+            {/* Search Pill */}
             <div className="relative hidden sm:block w-64 md:w-72">
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
               <Input
                 placeholder="Search encrypted vault..."
-                className="bg-neutral-50 border-transparent hover:bg-neutral-100 focus:bg-white focus:border-black/20 pl-8 text-xs h-8 rounded-full text-black placeholder:text-neutral-400 shadow-2xs"
+                className="bg-zinc-900/90 border-zinc-800 focus:border-cyan-500/60 pl-8 text-xs h-8 rounded-full text-zinc-100 placeholder:text-zinc-500 shadow-inner"
               />
             </div>
           </div>
@@ -248,16 +245,16 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   setPinVerified(false)
                   toast.info("Vault locked. PIN verification required.")
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-[11px] font-bold text-emerald-300 hover:bg-emerald-900/60 transition cursor-pointer shadow-sm"
                 title="Click to lock vault session"
               >
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>PIN Verified</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowPinModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white hover:bg-neutral-800 text-[11px] font-bold transition shadow-2xs cursor-pointer active:scale-[0.98]"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-600 hover:bg-cyan-500 text-white text-[11px] font-bold transition shadow-md shadow-cyan-600/30 cursor-pointer active:scale-[0.98]"
                 title="Verify your 4-digit PIN to access private telemetry"
               >
                 <KeyRound className="w-3 h-3" />
@@ -268,15 +265,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Button
               variant="ghost"
               size="icon"
-              className="relative text-neutral-600 hover:text-black h-8 w-8 rounded-full hover:bg-neutral-100 cursor-pointer"
+              className="relative text-zinc-400 hover:text-white h-8 w-8 rounded-full hover:bg-zinc-800 cursor-pointer"
               onClick={() => toast.info("All cryptographic protections active.")}
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
             </Button>
 
             <Link href="/dashboard/settings">
-              <div className="w-7 h-7 rounded-full bg-neutral-100 border border-black/8 flex items-center justify-center text-xs font-bold text-black hover:bg-neutral-200 transition shadow-2xs cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200 hover:bg-zinc-700 transition shadow-inner cursor-pointer">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </div>
             </Link>
@@ -284,7 +281,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Island Content Viewport - Only this area scrolls! Sidebar stays fixed! */}
-        <main className="flex-1 overflow-y-auto p-5 sm:p-7 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-5 sm:p-7 lg:p-8 bg-[#0d1117] text-white">
           {children}
         </main>
       </div>
